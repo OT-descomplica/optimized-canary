@@ -314,13 +314,13 @@ void IOBestiary::sendBuyCharmRune(Player* player, charmRune_t runeID, uint8_t ac
 
 		if (player->getCharmPoints() < charm->points) {
 			ss << "You don't have enough charm points to unlock this rune.";
-			player->sendFYIBox(ss.str());
+			player->sendLoginAdvice(ss.str());
 			player->BestiarysendCharms();
 			return;
 		}
 
 		ss << "You successfully unlocked '" << charm->name << "' for " << charm->points << " charm points.";
-		player->sendFYIBox(ss.str());
+		player->sendLoginAdvice(ss.str());
 		addCharmPoints(player, charm->points, true);
 
 		int32_t value = bitToggle(player->getUnlockedRunesBit(), charm, true);
@@ -341,13 +341,13 @@ void IOBestiary::sendBuyCharmRune(Player* player, charmRune_t runeID, uint8_t ac
 		}
 
 		if (limitRunes <= usedRunes.size()) {
-			player->sendFYIBox("You don't have any charm slots available.");
+			player->sendLoginAdvice("You don't have any charm slots available.");
 			player->BestiarysendCharms();
 			return;
 		}
 
 		setCharmRuneCreature(player, charm, raceid);
-		player->sendFYIBox("Creature has been set! You are Premium player, so you benefit from up to 6 runes! Charm Expansion allow you to set creatures to all runes at once!");
+		player->sendLoginAdvice("Creature has been set! You are Premium player, so you benefit from up to 6 runes! Charm Expansion allow you to set creatures to all runes at once!");
 	} else if (action == 2) {
 		int32_t fee = player->getLevel() * 100;
 		if (player->hasCharmExpansion()) {
@@ -356,11 +356,11 @@ void IOBestiary::sendBuyCharmRune(Player* player, charmRune_t runeID, uint8_t ac
 
 		if (g_game().removeMoney(player, fee, 0, true)) {
 			resetCharmRuneCreature(player, charm);
-			player->sendFYIBox("You successfully removed the creature.");
+			player->sendLoginAdvice("You successfully removed the creature.");
 			player->BestiarysendCharms();
 			return;
 		}
-		player->sendFYIBox("You don't have enough gold.");
+		player->sendLoginAdvice("You don't have enough gold.");
 	}
 	player->BestiarysendCharms();
 	return;

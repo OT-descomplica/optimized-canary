@@ -77,7 +77,6 @@ public:
 	explicit ProtocolGame(Connection_ptr initConnection) : Protocol(initConnection) {}
 
 	void login(const std::string &name, uint32_t accnumber, OperatingSystem_t operatingSystem);
-	void logout(bool displayEffect, bool forced);
 
 	void AddItem(NetworkMessage &msg, const Item *item);
 	void AddItem(NetworkMessage &msg, uint16_t id, uint8_t count);
@@ -99,7 +98,6 @@ private:
 		return std::static_pointer_cast<ProtocolGame>(shared_from_this());
 	}
 	void connect(uint32_t playerId, OperatingSystem_t operatingSystem);
-	void disconnectClient(const std::string &message) const;
 	void writeToOutputBuffer(const NetworkMessage &msg);
 
 	void release() override;
@@ -116,17 +114,6 @@ private:
 	void onRecvFirstMessage(NetworkMessage &msg) override;
 	void onConnect() override;
 
-	//Parse methods
-	void parseAutoWalk(NetworkMessage &msg);
-	void parseSetOutfit(NetworkMessage &msg);
-	void parseSay(NetworkMessage &msg);
-	void parseLookAt(NetworkMessage &msg);
-	void parseLookInBattleList(NetworkMessage &msg);
-
-	void parseQuickLoot(NetworkMessage &msg);
-	void parseLootContainer(NetworkMessage &msg);
-	void parseQuickLootBlackWhitelist(NetworkMessage &msg);
-
 	// Depot search
 	void sendDepotItems(const ItemsTierCountList &itemMap, uint16_t count);
 	void sendCloseDepotSearch();
@@ -137,119 +124,19 @@ private:
 									uint32_t inboxCount,
 									const ItemVector &inboxItems,
 									uint32_t stashCount);
-	void parseOpenDepotSearch();
-	void parseCloseDepotSearch();
-	void parseDepotSearchItemRequest(NetworkMessage &msg);
-	void parseOpenParentContainer(NetworkMessage &msg);
-	void parseRetrieveDepotSearch(NetworkMessage &msg);
-
-	void parseFightModes(NetworkMessage &msg);
-	void parseAttack(NetworkMessage &msg);
-	void parseFollow(NetworkMessage &msg);
 
 	void sendSessionEndInformation(SessionEndInformations information);
 
 	void sendItemInspection(uint16_t itemId, uint8_t itemCount, const Item *item, bool cyclopedia);
-	void parseInspectionObject(NetworkMessage &msg);
 
-	void parseCyclopediaCharacterInfo(NetworkMessage &msg);
-
-	void parseHighscores(NetworkMessage &msg);
-	void parseTaskHuntingAction(NetworkMessage &msg);
 	void sendHighscoresNoData();
 	void sendHighscores(const std::vector<HighscoreCharacter> &characters, uint8_t categoryId, uint32_t vocationId, uint16_t page, uint16_t pages);
 
-	void parseTournamentLeaderboard(NetworkMessage &msg);
-
-	void parseGreet(NetworkMessage &msg);
-	void parseBugReport(NetworkMessage &msg);
-	void parseDebugAssert(NetworkMessage &msg);
-	void parsePreyAction(NetworkMessage &msg);
-	void parseRuleViolationReport(NetworkMessage &msg);
-
-	void parseBestiarysendRaces();
-	void parseBestiarysendCreatures(NetworkMessage &msg);
 	void BestiarysendCharms();
 	void sendBestiaryEntryChanged(uint16_t raceid);
 	void refreshBestiaryTracker(std::list<MonsterType *> trackerList);
 	void sendTeamFinderList();
-	void sendLeaderTeamFinder(bool reset);
-	void createLeaderTeamFinder(NetworkMessage &msg);
-	void parsePartyAnalyzerAction(NetworkMessage &msg) const;
-	void parseLeaderFinderWindow(NetworkMessage &msg);
-	void parseMemberFinderWindow(NetworkMessage &msg);
-	void parseSendBuyCharmRune(NetworkMessage &msg);
-	void parseBestiarysendMonsterData(NetworkMessage &msg);
-	void addBestiaryTrackerList(NetworkMessage &msg);
-	void parseObjectInfo(NetworkMessage &msg);
-
-	void parseTeleport(NetworkMessage &msg);
-	void parseThrow(NetworkMessage &msg);
-	void parseUseItemEx(NetworkMessage &msg);
-	void parseUseWithCreature(NetworkMessage &msg);
-	void parseUseItem(NetworkMessage &msg);
-	void parseCloseContainer(NetworkMessage &msg);
-	void parseUpArrowContainer(NetworkMessage &msg);
-	void parseUpdateContainer(NetworkMessage &msg);
-	void parseTextWindow(NetworkMessage &msg);
-	void parseHouseWindow(NetworkMessage &msg);
-
-	void parseLookInShop(NetworkMessage &msg);
-	void parsePlayerBuyOnShop(NetworkMessage &msg);
-	void parsePlayerSellOnShop(NetworkMessage &msg);
-
-	void parseQuestLine(NetworkMessage &msg);
-
-	void parseInviteToParty(NetworkMessage &msg);
-	void parseJoinParty(NetworkMessage &msg);
-	void parseRevokePartyInvite(NetworkMessage &msg);
-	void parsePassPartyLeadership(NetworkMessage &msg);
-	void parseEnableSharedPartyExperience(NetworkMessage &msg);
-
-	void parseToggleMount(NetworkMessage &msg);
-
-	// Imbuements
-	void parseApplyImbuement(NetworkMessage &msg);
-	void parseClearImbuement(NetworkMessage &msg);
-	void parseCloseImbuementWindow(NetworkMessage &msg);
-
-	void parseModalWindowAnswer(NetworkMessage &msg);
-
-	void parseBrowseField(NetworkMessage &msg);
-	void parseSeekInContainer(NetworkMessage &msg);
-
-	//trade methods
-	void parseRequestTrade(NetworkMessage &msg);
-	void parseLookInTrade(NetworkMessage &msg);
-
-	//market methods
-	void parseMarketLeave();
-	void parseMarketBrowse(NetworkMessage &msg);
-	void parseMarketCreateOffer(NetworkMessage &msg);
-	void parseMarketCancelOffer(NetworkMessage &msg);
-	void parseMarketAcceptOffer(NetworkMessage &msg);
-
-	//VIP methods
-	void parseAddVip(NetworkMessage &msg);
-	void parseRemoveVip(NetworkMessage &msg);
-	void parseEditVip(NetworkMessage &msg);
-
-	void parseRotateItem(NetworkMessage &msg);
-	void parseConfigureShowOffSocket(NetworkMessage& msg);
-	void parseWrapableItem(NetworkMessage &msg);
-
-	//Channel tabs
-	void parseChannelInvite(NetworkMessage &msg);
-	void parseChannelExclude(NetworkMessage &msg);
-	void parseOpenChannel(NetworkMessage &msg);
-	void parseOpenPrivateChannel(NetworkMessage &msg);
-	void parseCloseChannel(NetworkMessage &msg);
-
-	//Store methods
-	void parseStoreOpen(NetworkMessage &message);
-	void parseStoreRequestOffers(NetworkMessage &message);
-	void parseStoreBuyOffer(NetworkMessage &message);
-	void parseCoinTransfer(NetworkMessage &msg);
+	void sendLeaderTeamFinder(bool reset);=
 
 	// Imbuement info
 	void addImbuementInfo(NetworkMessage &msg, uint16_t imbuementId) const;
@@ -266,7 +153,6 @@ private:
 	void sendToChannel(const Creature *creature, SpeakClasses type, const std::string &text, uint16_t channelId);
 	void sendPrivateMessage(const Player *speaker, SpeakClasses type, const std::string &text);
 	void sendIcons(uint32_t icons);
-	void sendFYIBox(const std::string &message);
 
 	void openImbuementWindow(Item *item);
 	void sendImbuementResult(const std::string message);
@@ -289,7 +175,6 @@ private:
 	void sendPlayerVocation(const Player* target);
 	void sendSkills();
 	void sendPing();
-	void sendPingBack();
 	void sendCreatureTurn(const Creature *creature, uint32_t stackpos);
 	void sendCreatureSay(const Creature *creature, SpeakClasses type, const std::string &text, const Position *pos = nullptr);
 
@@ -309,9 +194,10 @@ private:
 	void sendTutorial(uint8_t tutorialId);
 	void sendAddMarker(const Position &pos, uint8_t markType, const std::string &desc);
 
-	void sendTournamentLeaderboard();
-
+	void sendBestiaryRaces();
+	void sendBestiaryMonsters(std::string name, std::map<uint16_t, std::string> races);
 	void sendCyclopediaCharacterNoData(CyclopediaCharacterInfoType_t characterInfoType, uint8_t errorCode);
+	void sendBestiaryMonsterData(uint16_t raceId, MonsterType *mtype, std::string Class);
 	void sendCyclopediaCharacterBaseInformation();
 	void sendCyclopediaCharacterGeneralStats();
 	void sendCyclopediaCharacterCombatStats();
@@ -359,9 +245,6 @@ private:
 	void sendUpdatedVIPStatus(uint32_t guid, VipStatus_t newStatus);
 	void sendVIP(uint32_t guid, const std::string &name, const std::string &description, uint32_t icon, bool notify, VipStatus_t status);
 
-	void sendPendingStateEntered();
-	void sendEnterWorld();
-
 	void sendFightModes();
 
 	void sendCreatureLight(const Creature *creature);
@@ -386,10 +269,6 @@ private:
 	void sendPreyTimeLeft(const PreySlot* slot);
 	void sendPreyData(const PreySlot* slot);
 	void sendPreyPrices();
-
-	void sendStoreTrasactionHistory(HistoryStoreOfferList &list, uint32_t page, uint8_t entriesPerPage);
-	void parseStoreOpenTransactionHistory(NetworkMessage &msg);
-	void parseStoreRequestTransactionHistory(NetworkMessage &msg);
 
 	//tiles
 	void sendMapDescription(const Position &pos);
@@ -428,11 +307,6 @@ private:
 	void sendUpdateImpactTracker(CombatType_t type, int32_t amount);
 	void sendUpdateInputAnalyzer(CombatType_t type, int32_t amount, std::string target);
 
-	// Hotkey equip/dequip item
-	void parseHotkeyEquip(NetworkMessage &msg);
-
-	//Help functions
-
 	// translate a tile to clientreadable format
 	void GetTileDescription(const Tile *tile, NetworkMessage &msg);
 
@@ -466,9 +340,6 @@ private:
 	void AddHiddenShopItem(NetworkMessage &msg);
 	void AddShopItem(NetworkMessage &msg, const ShopBlock &shopBlock);
 
-	//otclient
-	void parseExtendedOpcode(NetworkMessage &msg);
-
 	//reloadCreature
 	void reloadCreature(const Creature *creature);
 
@@ -488,12 +359,10 @@ private:
 	bool acceptPackets = false;
 
 	bool loggedIn = false;
-	bool shouldAddExivaRestrictions = false;
 
 	void sendInventory();
 
 	void sendOpenStash();
-	void parseStashWithdraw(NetworkMessage &msg);
 	void sendSpecialContainersAvailable();
 };
 

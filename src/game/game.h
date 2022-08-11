@@ -261,11 +261,9 @@ class Game
                                              const std::string& comment,
                                              const std::string& translation);
 
-		void playerCyclopediaCharacterInfo(Player* player, uint32_t characterID, CyclopediaCharacterInfoType_t characterInfoType, uint16_t entriesPerPage, uint16_t page);
+		void playerCyclopediaCharacterInfo(uint32_t playerId, uint32_t characterID, CyclopediaCharacterInfoType_t characterInfoType, uint16_t entriesPerPage, uint16_t page);
 
-		void playerHighscores(Player* player, HighscoreType_t type, uint8_t category, uint32_t vocation, const std::string& worldName, uint16_t page, uint8_t entriesPerPage);
-
-		void playerTournamentLeaderboard(uint32_t playerId, uint8_t leaderboardType);
+		void playerHighscores(uint32_t playerId, HighscoreType_t type, uint8_t category, uint32_t vocation, const std::string& worldName, uint16_t page, uint8_t entriesPerPage);
 
 		void updatePlayerSaleItems(uint32_t playerId);
 
@@ -295,8 +293,6 @@ class Game
 		void playerStowItem(uint32_t playerId, const Position& pos, uint16_t itemId, uint8_t stackpos, uint8_t count, bool allItems);
 		void playerStashWithdraw(uint32_t playerId, uint16_t itemId, uint32_t count, uint8_t stackpos);
 		void playerCloseNpcChannel(uint32_t playerId);
-		void playerReceivePing(uint32_t playerId);
-		void playerReceivePingBack(uint32_t playerId);
 		void playerAutoWalk(uint32_t playerId, const std::forward_list<Direction>& listDir);
 		void playerStopAutoWalk(uint32_t playerId);
 		void playerUseItemEx(uint32_t playerId, const Position& fromPos, uint8_t fromStackPos,
@@ -305,10 +301,9 @@ class Game
 		void playerUseWithCreature(uint32_t playerId, const Position& fromPos, uint8_t fromStackPos, uint32_t creatureId, uint16_t itemId);
 		void playerCloseContainer(uint32_t playerId, uint8_t cid);
 		void playerMoveUpContainer(uint32_t playerId, uint8_t cid);
-		void playerUpdateContainer(uint32_t playerId, uint8_t cid);
 		void playerRotateItem(uint32_t playerId, const Position& pos, uint8_t stackPos, const uint16_t itemId);
 		void playerConfigureShowOffSocket(uint32_t playerId, const Position& pos, uint8_t stackPos, const uint16_t itemId);
-		void playerSetShowOffSocket(uint32_t playerId, Outfit_t& outfit, const Position& pos, uint8_t stackPos, const uint16_t itemId, uint8_t podiumVisible, uint8_t direction);
+		void playerSetShowOffSocket(uint32_t playerId, Outfit_t& outfit, const Position& pos, uint8_t stackPos, const uint16_t itemId, bool podiumVisible, uint8_t direction);
 		void playerWrapableItem(uint32_t playerId, const Position& pos, uint8_t stackPos, const uint16_t itemId);
 		void playerWriteItem(uint32_t playerId, uint32_t windowTextId, const std::string& text);
 		void playerBrowseField(uint32_t playerId, const Position& pos);
@@ -363,6 +358,10 @@ class Game
 		void playerCloseImbuementWindow(uint32_t playerid);
 		void playerTurn(uint32_t playerId, Direction dir);
 		void playerRequestOutfit(uint32_t playerId);
+		void playerRequestMonsterCyclopedia(uint32_t playerId);
+		void playerRequestMonsterCyclopediaMonsters(uint32_t playerId, std::string name, std::map<uint16_t, std::string> races);
+		void playerRequestMonsterCyclopediaRace(uint32_t playerId, uint16_t raceId);
+		void playerRequestBuyCharmRune(uint32_t playerId, uint8_t runeId, uint8_t action, uint16_t raceid);
 		void playerShowQuestLog(uint32_t playerId);
 		void playerShowQuestLine(uint32_t playerId, uint16_t questId);
 		void playerSay(uint32_t playerId, uint16_t channelId, SpeakClasses type,
@@ -383,10 +382,9 @@ class Game
 		void playerCancelMarketOffer(uint32_t playerId, uint32_t timestamp, uint16_t counter);
 		void playerAcceptMarketOffer(uint32_t playerId, uint32_t timestamp, uint16_t counter, uint16_t amount);
 		void playerStoreOpen(uint32_t playerId, uint8_t serviceType);
-		void playerShowStoreCategoryOffers(uint32_t playerId, StoreCategory* category);
+		void playerShowStoreCategoryOffers(uint32_t playerId, uint8_t index);
 		void playerBuyStoreOffer(uint32_t playerId, uint32_t offerId, uint8_t productType, const std::string& additionalInfo="");
 		void playerCoinTransfer(uint32_t playerId, const std::string& receiverName, uint32_t amount);
-		void playerStoreTransactionHistory(uint32_t playerId, uint32_t page);
 
 		void parsePlayerExtendedOpcode(uint32_t playerId, uint8_t opcode, const std::string& buffer);
 
@@ -527,8 +525,8 @@ class Game
 			tilesToClean.clear();
 		}
 
-		void playerInspectItem(Player* player, const Position& pos);
-		void playerInspectItem(Player* player, uint16_t itemId, uint8_t itemCount, bool cyclopedia);
+		void playerInspectItem(uint32_t playerId, const Position& pos);
+		void playerInspectItem(uint32_t playerId, uint16_t itemId, uint8_t itemCount, bool cyclopedia);
 
 		void addCharmRune(Charm* charm)
 		{

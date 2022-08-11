@@ -44,6 +44,9 @@
 #include "map/town.h"
 #include "vocations/vocation.h"
 #include "creatures/npcs/npc.h"
+#include "creatures/players/modules/client.h"
+#include "creatures/players/modules/server.h"
+#include "server/network/protocol/protocolgame/network_definitions.hpp"
 
 class House;
 class NetworkMessage;
@@ -56,6 +59,8 @@ class Guild;
 class Imbuement;
 class PreySlot;
 class TaskHuntingSlot;
+class PlayerClientModules;
+class PlayerServerModules;
 
 struct OpenContainer {
 	Container* container;
@@ -92,6 +97,56 @@ class Player final : public Creature, public Cylinder
 			}
 		}
 
+		void ParseDataFromModule(NetworkPacketBuffer* bufferPacket) {
+			if (!playerClientModules || !bufferPacket || bufferPacket->getData() == nullptr) {
+				return;
+			}
+
+			playerClientModules->ParseFromNetworkData(bufferPacket->getData());
+		}
+
+		bool ParseDataToModule(NetworkPacketBuffer* bufferPacket) {
+			if (!playerServerModules || !bufferPacket || bufferPacket->getData() == nullptr) {
+				return;
+			}
+
+			return playerServerModules->ParseToNetworkData(bufferPacket->getData());
+		}
+
+		void sendPendingStateEntered() const {
+			if (client && playerServerModules) {
+				playerServerModules->sendPendingStateEntered();
+			}
+		}
+
+		void sendWorldEntered() const {
+			if (client && playerServerModules) {
+				playerServerModules->sendWorldEntered();
+			}
+		}
+
+		void sendLoginError(const std::string &error) const {
+			if (client && playerServerModules) {
+				playerServerModules->sendLoginError(error);
+			}
+		}
+
+		void sendLoginAdvice(const std::string &advice) const {
+			if (client && playerServerModules) {
+				playerServerModules->sendLoginAdvice(advice);
+			}
+		}
+
+		void sendLoginWait(const std::string &error, const uint8_t delay) const {
+			if (client && playerServerModules) {
+				playerServerModules->sendLoginWait(error, delay);
+			}
+		}
+
+
+
+
+
 		static MuteCountMap muteCountMap;
 
 		const std::string& getName() const override {
@@ -122,12 +177,6 @@ class Player final : public Creature, public Cylinder
 		bool untameMount(uint8_t mountId);
 		bool hasMount(const Mount* mount) const;
 		void dismount();
-
-		void sendFYIBox(const std::string& message) {
-			if (client) {
-				client->sendFYIBox(message);
-			}
-		}
 
 		void BestiarysendCharms() {
 			if (client) {
@@ -267,6 +316,12 @@ class Player final : public Creature, public Cylinder
 		void sendBestiaryEntryChanged(uint16_t raceid) {
 			if (client) {
 				client->sendBestiaryEntryChanged(raceid);
+			}
+		}
+
+		void sendBestiaryMonsterData(uint16_t raceId, MonsterType *mtype, std::string Class) {
+			if (client) {
+				client->sendBestiaryMonsterData(raceid, mtype, Class);
 			}
 		}
 
@@ -1079,12 +1134,6 @@ class Player final : public Creature, public Cylinder
 			}
 		}
 
-		void sendStoreTrasactionHistory(HistoryStoreOfferList& list, uint32_t page, uint8_t entriesPerPage) {
-			if(client) {
-				client->sendStoreTrasactionHistory(list, page, entriesPerPage);
-			}
-		}
-
 		// Quickloot
 		void sendLootContainers() {
 			if (client) {
@@ -1511,14 +1560,14 @@ class Player final : public Creature, public Cylinder
 		void resetAsyncOngoingTask(uint64_t flags) {
 			asyncOngoingTasks &= ~(flags);
 		}
-		void sendTournamentLeaderboard() {
-  			if (client) {
-				client->sendTournamentLeaderboard();
+		void sendBestiaryMonsters(std::string name, std::map<uint16_t, std::string> races) {
+			if (client) {
+				client->sendBestiaryMonsters(name, races);
 			}
 		}
-		void sendEnterWorld() {
+		void sendBestiaryRaces() {
 			if (client) {
-				client->sendEnterWorld();
+				client->sendBestiaryRaces();
 			}
 		}
 		void sendFightModes() {
@@ -1735,12 +1784,6 @@ class Player final : public Creature, public Cylinder
 		}
 
 
-   		void createLeaderTeamFinder(NetworkMessage &msg)
- 		{
-  			if (client) {
- 				client->createLeaderTeamFinder(msg);
- 			}
- 		}
    		void sendLeaderTeamFinder(bool reset)
  		{
   			if (client) {
@@ -2246,6 +2289,8 @@ class Player final : public Creature, public Cylinder
 		Town* town = nullptr;
 		Vocation* vocation = nullptr;
 		RewardChest* rewardChest = nullptr;
+		PlayerClientModules* playerClientModules = nullptr;
+		PlayerServerModules* playerServerModules = nullptr;
 
 		uint32_t inventoryWeight = 0;
 		uint32_t capacity = 40000;

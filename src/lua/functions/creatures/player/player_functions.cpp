@@ -2559,7 +2559,7 @@ int PlayerFunctions::luaPlayerPopupFYI(lua_State* L) {
 	Player* player = getUserdata<Player>(L, 1);
 	if (player) {
 		const std::string& message = getString(L, 2);
-		player->sendFYIBox(message);
+		player->sendLoginAdvice(message);
 		pushBoolean(L, true);
 	} else {
 		lua_pushnil(L);

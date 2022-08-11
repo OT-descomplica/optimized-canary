@@ -45,7 +45,8 @@ Player::Player(ProtocolGame_ptr p) :
                                     lastPing(OTSYS_TIME()),
                                     lastPong(lastPing),
                                     inbox(new Inbox(ITEM_INBOX)),
-                                    client(std::move(p)) {
+                                    client(std::move(p)),
+									playerModules(new PlayerModules(this)) {
   inbox->incrementReferenceCounter();
 }
 
@@ -91,6 +92,7 @@ Player::~Player()
 	setWriteItem(nullptr);
 	setEditHouse(nullptr);
 	logged = false;
+	delete playerModules;
 }
 
 bool Player::setVocation(uint16_t vocId)

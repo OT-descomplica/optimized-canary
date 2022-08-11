@@ -1056,7 +1056,12 @@ void Game::playerTeleport(uint32_t playerId, const Position& newPosition) {
   }
 }
 
-void Game::playerInspectItem(Player* player, const Position& pos) {
+void Game::playerInspectItem(uint32_t playerId, const Position& pos) {
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
 	Thing* thing = internalGetThing(player, pos, 0, 0, STACKPOS_TOPDOWN_ITEM);
 	if (!thing) {
 		player->sendCancelMessage(RETURNVALUE_NOTPOSSIBLE);
@@ -1072,7 +1077,12 @@ void Game::playerInspectItem(Player* player, const Position& pos) {
 	player->sendItemInspection(item->getID(), static_cast<uint8_t>(item->getItemCount()), item, false);
 }
 
-void Game::playerInspectItem(Player* player, uint16_t itemId, uint8_t itemCount, bool cyclopedia) {
+void Game::playerInspectItem(uint32_t playerId, uint16_t itemId, uint8_t itemCount, bool cyclopedia) {
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
 	player->sendItemInspection(itemId, itemCount, nullptr, cyclopedia);
 }
 
@@ -2952,26 +2962,6 @@ void Game::playerCloseNpcChannel(uint32_t playerId)
 	}
 }
 
-void Game::playerReceivePing(uint32_t playerId)
-{
-	Player* player = getPlayerByID(playerId);
-	if (!player) {
-		return;
-	}
-
-	player->receivePing();
-}
-
-void Game::playerReceivePingBack(uint32_t playerId)
-{
-	Player* player = getPlayerByID(playerId);
-	if (!player) {
-		return;
-	}
-
-	player->sendPingBack();
-}
-
 void Game::playerAutoWalk(uint32_t playerId, const std::forward_list<Direction>& listDir)
 {
 	Player* player = getPlayerByID(playerId);
@@ -3402,21 +3392,6 @@ void Game::playerMoveUpContainer(uint32_t playerId, uint8_t cid)
 	}
 }
 
-void Game::playerUpdateContainer(uint32_t playerId, uint8_t cid)
-{
-	Player* player = getPlayerByGUID(playerId);
-	if (!player) {
-		return;
-	}
-
-	Container* container = player->getContainerByID(cid);
-	if (!container) {
-		return;
-	}
-
-	player->sendContainer(cid, container, container->hasParent(), player->getContainerIndex(cid));
-}
-
 void Game::playerRotateItem(uint32_t playerId, const Position& pos, uint8_t stackPos, const uint16_t itemId)
 {
 	Player* player = getPlayerByID(playerId);
@@ -3492,7 +3467,7 @@ void Game::playerConfigureShowOffSocket(uint32_t playerId, const Position& pos, 
 	player->sendPodiumWindow(item, pos, itemId, stackPos);
 }
 
-void Game::playerSetShowOffSocket(uint32_t playerId, Outfit_t& outfit, const Position& pos, uint8_t stackPos, const uint16_t itemId, uint8_t podiumVisible, uint8_t direction)
+void Game::playerSetShowOffSocket(uint32_t playerId, Outfit_t& outfit, const Position& pos, uint8_t stackPos, const uint16_t itemId, bool podiumVisible, uint8_t direction)
 {
 	Player* player = getPlayerByID(playerId);
 	if (!player || pos.x == 0xFFFF) {
@@ -3562,7 +3537,7 @@ void Game::playerSetShowOffSocket(uint32_t playerId, Outfit_t& outfit, const Pos
 		item->removeCustomAttribute("LookMount");
 	}
 
-	key = "PodiumVisible"; item->setCustomAttribute(key, static_cast<int64_t>(podiumVisible));
+	key = "PodiumVisible"; item->setCustomAttribute(key, podiumVisible ? 1 : 0);
 	key = "LookDirection"; item->setCustomAttribute(key, static_cast<int64_t>(direction));
 
 	SpectatorHashSet spectators;
@@ -5141,6 +5116,60 @@ void Game::playerChangeOutfit(uint32_t playerId, Outfit_t outfit)
 
 		internalCreatureChangeOutfit(player, outfit);
 	}
+}
+
+void Game::playerRequestMonsterCyclopedia(uint32_t playerId)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	player->sendBestiaryRaces();
+}
+void Game::playerRequestMonsterCyclopediaRace(uint32_t playerId, uint16_t raceId)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	std::string Class = "";
+	MonsterType *monsterType = nullptr;
+	std::map<uint16_t, std::string> bestiaryList = getBestiaryList();
+	if (auto it = bestiaryList.find(data->RaceId); it != bestiaryList.end()) {
+		if (monsterType = g_monsters().getMonsterType(it->second)) {
+			Class = mType->info.bestiaryClass;
+		}
+	}
+
+	if (!monsterType) {
+		SPDLOG_WARN("[Game::playerRequestMonsterCyclopediaRace] - "
+                    "MonsterType with raceId '{}' sent by player '{}' was not found and was ignored", data->RaceId, player->getName());
+		return;
+	}
+
+	player->sendBestiaryMonsterData(raceId, monsterType, Class);
+}
+
+void Game::playerRequestBuyCharmRune(uint32_t playerId, uint8_t runeId, uint8_t action, uint16_t raceid)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_iobestiary().sendBuyCharmRune(player, runeId, action, raceid);
+}
+
+void Game::playerRequestMonsterCyclopediaMonsters(uint32_t playerId, std::string name, std::map<uint16_t, std::string> races)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	player->sendBestiaryMonsters(name, races);
 }
 
 void Game::playerShowQuestLog(uint32_t playerId)
@@ -7195,9 +7224,14 @@ void Game::kickPlayer(uint32_t playerId, bool displayEffect)
 	player->removePlayer(displayEffect);
 }
 
-void Game::playerCyclopediaCharacterInfo(Player* player, uint32_t characterID, CyclopediaCharacterInfoType_t characterInfoType, uint16_t entriesPerPage, uint16_t page) {
+void Game::playerCyclopediaCharacterInfo(uint32_t playerId, uint32_t characterID, CyclopediaCharacterInfoType_t characterInfoType, uint16_t entriesPerPage, uint16_t page) {
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
 	uint32_t playerGUID = player->getGUID();
-  if (characterID != playerGUID) {
+  	if (characterID != playerGUID) {
 		//For now allow viewing only our character since we don't have tournaments supported
 		player->sendCyclopediaCharacterNoData(characterInfoType, 2);
 		return;
@@ -7207,120 +7241,120 @@ void Game::playerCyclopediaCharacterInfo(Player* player, uint32_t characterID, C
 	case CYCLOPEDIA_CHARACTERINFO_BASEINFORMATION: player->sendCyclopediaCharacterBaseInformation(); break;
 	case CYCLOPEDIA_CHARACTERINFO_GENERALSTATS: player->sendCyclopediaCharacterGeneralStats(); break;
 	case CYCLOPEDIA_CHARACTERINFO_COMBATSTATS: player->sendCyclopediaCharacterCombatStats(); break;
-  case CYCLOPEDIA_CHARACTERINFO_RECENTDEATHS: {
-    std::ostringstream query;
-    uint32_t offset = static_cast<uint32_t>(page - 1) * entriesPerPage;
-			query << "SELECT `time`, `level`, `killed_by`, `mostdamage_by`, (select count(*) FROM `player_deaths` WHERE `player_id` = " << playerGUID << ") as `entries` FROM `player_deaths` WHERE `player_id` = " << playerGUID << " ORDER BY `time` DESC LIMIT " << offset << ", " << entriesPerPage;
+ 	case CYCLOPEDIA_CHARACTERINFO_RECENTDEATHS: {
+		std::ostringstream query;
+		uint32_t offset = static_cast<uint32_t>(page - 1) * entriesPerPage;
+		query << "SELECT `time`, `level`, `killed_by`, `mostdamage_by`, (select count(*) FROM `player_deaths` WHERE `player_id` = " << playerGUID << ") as `entries` FROM `player_deaths` WHERE `player_id` = " << playerGUID << " ORDER BY `time` DESC LIMIT " << offset << ", " << entriesPerPage;
 
-			uint32_t playerID = player->getID();
-			std::function<void(DBResult_ptr, bool)> callback = [playerID, page, entriesPerPage](DBResult_ptr result, bool) {
-				Player* player = g_game().getPlayerByID(playerID);
-				if (!player) {
-					return;
+		uint32_t playerID = player->getID();
+		std::function<void(DBResult_ptr, bool)> callback = [playerID, page, entriesPerPage](DBResult_ptr result, bool) {
+			Player* player = g_game().getPlayerByID(playerID);
+			if (!player) {
+				return;
+			}
+
+			player->resetAsyncOngoingTask(PlayerAsyncTask_RecentDeaths);
+			if (!result) {
+				player->sendCyclopediaCharacterRecentDeaths(0, 0, {});
+				return;
+			}
+
+			uint32_t pages = result->getNumber<uint32_t>("entries");
+			pages += entriesPerPage - 1;
+			pages /= entriesPerPage;
+
+			std::vector<RecentDeathEntry> entries;
+			entries.reserve(result->countResults());
+			do {
+				std::string cause1 = result->getString("killed_by");
+				std::string cause2 = result->getString("mostdamage_by");
+
+				std::ostringstream cause;
+				cause << "Died at Level " << result->getNumber<uint32_t>("level") << " by";
+				if (!cause1.empty()) {
+					const char& character = cause1.front();
+					if (character == 'a' || character == 'e' || character == 'i' || character == 'o' || character == 'u') {
+						cause << " an ";
+					} else {
+						cause << " a ";
+					}
+					cause << cause1;
 				}
 
-				player->resetAsyncOngoingTask(PlayerAsyncTask_RecentDeaths);
-				if (!result) {
-					player->sendCyclopediaCharacterRecentDeaths(0, 0, {});
-					return;
-				}
-
-				uint32_t pages = result->getNumber<uint32_t>("entries");
-				pages += entriesPerPage - 1;
-				pages /= entriesPerPage;
-
-				std::vector<RecentDeathEntry> entries;
-				entries.reserve(result->countResults());
-				do {
-					std::string cause1 = result->getString("killed_by");
-					std::string cause2 = result->getString("mostdamage_by");
-
-					std::ostringstream cause;
-					cause << "Died at Level " << result->getNumber<uint32_t>("level") << " by";
+				if (!cause2.empty()) {
 					if (!cause1.empty()) {
-						const char& character = cause1.front();
-						if (character == 'a' || character == 'e' || character == 'i' || character == 'o' || character == 'u') {
-							cause << " an ";
-						} else {
-							cause << " a ";
-						}
-						cause << cause1;
+						cause << " and ";
 					}
 
-					if (!cause2.empty()) {
-						if (!cause1.empty()) {
-							cause << " and ";
-						}
-
-						const char& character = cause2.front();
-						if (character == 'a' || character == 'e' || character == 'i' || character == 'o' || character == 'u') {
-							cause << " an ";
-						} else {
-							cause << " a ";
-						}
-						cause << cause2;
+					const char& character = cause2.front();
+					if (character == 'a' || character == 'e' || character == 'i' || character == 'o' || character == 'u') {
+						cause << " an ";
+					} else {
+						cause << " a ";
 					}
+					cause << cause2;
+				}
 					cause << '.';
-					entries.emplace_back(std::move(cause.str()), result->getNumber<uint32_t>("time"));
-				} while (result->next());
-				player->sendCyclopediaCharacterRecentDeaths(page, static_cast<uint16_t>(pages), entries);
-			};
-			g_databaseTasks().addTask(query.str(), callback, true);
-			player->addAsyncOngoingTask(PlayerAsyncTask_RecentDeaths);
-			break;
+				entries.emplace_back(std::move(cause.str()), result->getNumber<uint32_t>("time"));
+			} while (result->next());
+			player->sendCyclopediaCharacterRecentDeaths(page, static_cast<uint16_t>(pages), entries);
+		};
+		g_databaseTasks().addTask(query.str(), callback, true);
+		player->addAsyncOngoingTask(PlayerAsyncTask_RecentDeaths);
+		break;
 	}
 	case CYCLOPEDIA_CHARACTERINFO_RECENTPVPKILLS: {
-			// TODO: add guildwar, assists and arena kills
-			Database& db = Database::getInstance();
-			const std::string& escapedName = db.escapeString(player->getName());
-			std::ostringstream query;
-			uint32_t offset = static_cast<uint32_t>(page - 1) * entriesPerPage;
-			query << "SELECT `d`.`time`, `d`.`killed_by`, `d`.`mostdamage_by`, `d`.`unjustified`, `d`.`mostdamage_unjustified`, `p`.`name`, (select count(*) FROM `player_deaths` WHERE ((`killed_by` = " << escapedName << " AND `is_player` = 1) OR (`mostdamage_by` = " << escapedName << " AND `mostdamage_is_player` = 1))) as `entries` FROM `player_deaths` AS `d` INNER JOIN `players` AS `p` ON `d`.`player_id` = `p`.`id` WHERE ((`d`.`killed_by` = " << escapedName << " AND `d`.`is_player` = 1) OR (`d`.`mostdamage_by` = " << escapedName << " AND `d`.`mostdamage_is_player` = 1)) ORDER BY `time` DESC LIMIT " << offset << ", " << entriesPerPage;
+		// TODO: add guildwar, assists and arena kills
+		Database& db = Database::getInstance();
+		const std::string& escapedName = db.escapeString(player->getName());
+		std::ostringstream query;
+		uint32_t offset = static_cast<uint32_t>(page - 1) * entriesPerPage;
+		query << "SELECT `d`.`time`, `d`.`killed_by`, `d`.`mostdamage_by`, `d`.`unjustified`, `d`.`mostdamage_unjustified`, `p`.`name`, (select count(*) FROM `player_deaths` WHERE ((`killed_by` = " << escapedName << " AND `is_player` = 1) OR (`mostdamage_by` = " << escapedName << " AND `mostdamage_is_player` = 1))) as `entries` FROM `player_deaths` AS `d` INNER JOIN `players` AS `p` ON `d`.`player_id` = `p`.`id` WHERE ((`d`.`killed_by` = " << escapedName << " AND `d`.`is_player` = 1) OR (`d`.`mostdamage_by` = " << escapedName << " AND `d`.`mostdamage_is_player` = 1)) ORDER BY `time` DESC LIMIT " << offset << ", " << entriesPerPage;
 
-			uint32_t playerID = player->getID();
-			std::function<void(DBResult_ptr, bool)> callback = [playerID, page, entriesPerPage](DBResult_ptr result, bool) {
-				Player* player = g_game().getPlayerByID(playerID);
-				if (!player) {
-					return;
-				}
+		uint32_t playerID = player->getID();
+		std::function<void(DBResult_ptr, bool)> callback = [playerID, page, entriesPerPage](DBResult_ptr result, bool) {
+			Player* player = g_game().getPlayerByID(playerID);
+			if (!player) {
+				return;
+			}
 
-				player->resetAsyncOngoingTask(PlayerAsyncTask_RecentPvPKills);
-				if (!result) {
-					player->sendCyclopediaCharacterRecentPvPKills(0, 0, {});
-					return;
-				}
+			player->resetAsyncOngoingTask(PlayerAsyncTask_RecentPvPKills);
+			if (!result) {
+				player->sendCyclopediaCharacterRecentPvPKills(0, 0, {});
+				return;
+			}
 
-				uint32_t pages = result->getNumber<uint32_t>("entries");
-				pages += entriesPerPage - 1;
-				pages /= entriesPerPage;
+			uint32_t pages = result->getNumber<uint32_t>("entries");
+			pages += entriesPerPage - 1;
+			pages /= entriesPerPage;
 
-				std::vector<RecentPvPKillEntry> entries;
-				entries.reserve(result->countResults());
-				do {
-					std::string cause1 = result->getString("killed_by");
-					std::string cause2 = result->getString("mostdamage_by");
-					std::string name = result->getString("name");
+			std::vector<RecentPvPKillEntry> entries;
+			entries.reserve(result->countResults());
+			do {
+				std::string cause1 = result->getString("killed_by");
+				std::string cause2 = result->getString("mostdamage_by");
+				std::string name = result->getString("name");
 
-					uint8_t status = CYCLOPEDIA_CHARACTERINFO_RECENTKILLSTATUS_JUSTIFIED;
-					if (player->getName() == cause1) {
-						if (result->getNumber<uint32_t>("unjustified") == 1) {
-							status = CYCLOPEDIA_CHARACTERINFO_RECENTKILLSTATUS_UNJUSTIFIED;
-						}
-					} else if (player->getName() == cause2) {
-						if (result->getNumber<uint32_t>("mostdamage_unjustified") == 1) {
-							status = CYCLOPEDIA_CHARACTERINFO_RECENTKILLSTATUS_UNJUSTIFIED;
-						}
+				uint8_t status = CYCLOPEDIA_CHARACTERINFO_RECENTKILLSTATUS_JUSTIFIED;
+				if (player->getName() == cause1) {
+					if (result->getNumber<uint32_t>("unjustified") == 1) {
+						status = CYCLOPEDIA_CHARACTERINFO_RECENTKILLSTATUS_UNJUSTIFIED;
 					}
+				} else if (player->getName() == cause2) {
+					if (result->getNumber<uint32_t>("mostdamage_unjustified") == 1) {
+						status = CYCLOPEDIA_CHARACTERINFO_RECENTKILLSTATUS_UNJUSTIFIED;
+					}
+				}
 
-					std::ostringstream description;
-					description << "Killed " << name << '.';
-					entries.emplace_back(std::move(description.str()), result->getNumber<uint32_t>("time"), status);
-				} while (result->next());
-				player->sendCyclopediaCharacterRecentPvPKills(page, static_cast<uint16_t>(pages), entries);
-			};
-			g_databaseTasks().addTask(query.str(), callback, true);
-			player->addAsyncOngoingTask(PlayerAsyncTask_RecentPvPKills);
-			break;
+				std::ostringstream description;
+				description << "Killed " << name << '.';
+				entries.emplace_back(std::move(description.str()), result->getNumber<uint32_t>("time"), status);
+			} while (result->next());
+			player->sendCyclopediaCharacterRecentPvPKills(page, static_cast<uint16_t>(pages), entries);
+		};
+		g_databaseTasks().addTask(query.str(), callback, true);
+		player->addAsyncOngoingTask(PlayerAsyncTask_RecentPvPKills);
+		break;
 	}
 	case CYCLOPEDIA_CHARACTERINFO_ACHIEVEMENTS: player->sendCyclopediaCharacterAchievements(); break;
 	case CYCLOPEDIA_CHARACTERINFO_ITEMSUMMARY: player->sendCyclopediaCharacterItemSummary(); break;
@@ -7329,13 +7363,14 @@ void Game::playerCyclopediaCharacterInfo(Player* player, uint32_t characterID, C
 	case CYCLOPEDIA_CHARACTERINFO_INSPECTION: player->sendCyclopediaCharacterInspection(); break;
 	case CYCLOPEDIA_CHARACTERINFO_BADGES: player->sendCyclopediaCharacterBadges(); break;
 	case CYCLOPEDIA_CHARACTERINFO_TITLES: player->sendCyclopediaCharacterTitles(); break;
-  default: player->sendCyclopediaCharacterNoData(characterInfoType, 1); break;
+  	default: player->sendCyclopediaCharacterNoData(characterInfoType, 1); break;
 	}
 }
 
-void Game::playerHighscores(Player* player, HighscoreType_t type, uint8_t category, uint32_t vocation, const std::string&, uint16_t page, uint8_t entriesPerPage)
+void Game::playerHighscores(uint32_t playerId, HighscoreType_t type, uint8_t category, uint32_t vocation, const std::string&, uint16_t page, uint8_t entriesPerPage)
 {
-	if (player->hasAsyncOngoingTask(PlayerAsyncTask_Highscore)) {
+	Player* player = getPlayerByID(playerId);
+	if (!player || player->hasAsyncOngoingTask(PlayerAsyncTask_Highscore)) {
 		return;
 	}
 
@@ -7434,15 +7469,6 @@ void Game::playerHighscores(Player* player, HighscoreType_t type, uint8_t catego
 	};
 	g_databaseTasks().addTask(query.str(), callback, true);
 	player->addAsyncOngoingTask(PlayerAsyncTask_Highscore);
-}
-
-void Game::playerTournamentLeaderboard(uint32_t playerId, uint8_t leaderboardType) {
-	Player* player = getPlayerByID(playerId);
-	if (!player || leaderboardType > 1) {
-		return;
-	}
-
-	player->sendTournamentLeaderboard();
 }
 
 void Game::playerReportRuleViolationReport(uint32_t playerId, const std::string& targetName, uint8_t reportType, uint8_t reportReason, const std::string& comment, const std::string& translation)
@@ -7810,6 +7836,7 @@ void Game::playerCancelMarketOffer(uint32_t playerId, uint32_t timestamp, uint16
 	player->sendMarketEnter(player->getLastDepotId());
 	// Exhausted for cancel offer in the market
 	player->updateMarketExhausted();
+	player->sendCoinBalance();
 }
 
 void Game::playerAcceptMarketOffer(uint32_t playerId, uint32_t timestamp, uint16_t counter, uint16_t amount)
@@ -8058,6 +8085,7 @@ void Game::playerAcceptMarketOffer(uint32_t playerId, uint32_t timestamp, uint16
 			IOLoginData::savePlayer(sellerPlayer);
 			delete sellerPlayer;
 		}
+		player->sendCoinBalance();
 	}
 
 	const int32_t marketOfferDuration = g_configManager().getNumber(MARKET_OFFER_DURATION);
@@ -8090,10 +8118,14 @@ void Game::playerStoreOpen(uint32_t playerId, uint8_t serviceType)
 	}
 }
 
-void Game::playerShowStoreCategoryOffers(uint32_t playerId, StoreCategory* category)
+void Game::playerShowStoreCategoryOffers(uint32_t playerId, uint8_t index)
 {
 	Player* player = getPlayerByID(playerId);
-	if (player) {
+	if (!player) {
+		return;
+	}
+
+	if (StoreCategory* category = gameStore.getCategoryOffers().at(index))) {
 		player->sendShowStoreCategoryOffers(category);
 	}
 }
@@ -8435,69 +8467,57 @@ void Game::playerBuyStoreOffer(uint32_t playerId, uint32_t offerId,
 	}
 }
 
-void Game::playerCoinTransfer(uint32_t playerId,
-                              const std::string & receiverName, uint32_t amount) {
-	Player * sender = getPlayerByID(playerId);
-	Player * receiver = getPlayerByName(receiverName);
-	std::stringstream message;
+void Game::playerCoinTransfer(uint32_t playerId, const std::string & receiverName, uint32_t amount) {
+	Player* sender = getPlayerByID(playerId);
 	if (!sender) {
 		return;
-	} else if (!receiver) {
+	}
+
+	std::stringstream message;
+	Player* receiver = getPlayerByName(receiverName);
+	if (!receiver) {
 		message << "Player \"" << receiverName << "\" doesn't exist.";
-		sender -> sendStoreError(STORE_ERROR_TRANSFER, message.str());
+		sender->sendStoreError(STORE_ERROR_TRANSFER, message.str());
 		return;
-	} else {
-
-		account::Account sender_account;
-		sender_account.LoadAccountDB(sender -> getAccount());
-		account::Account receiver_account;
-		receiver_account.LoadAccountDB(receiver -> getAccount());
-		uint32_t sender_coins;
-		sender_account.GetCoins( & sender_coins);
-
-		if (sender -> getAccount() == receiver -> getAccount()) { // sender and receiver are the same
-			message << "You cannot send coins to your own account.";
-			sender -> sendStoreError(STORE_ERROR_TRANSFER, message.str());
-			return;
-		} else if (sender_coins < amount) {
-			message << "You don't have enough funds to transfer these coins.";
-			sender -> sendStoreError(STORE_ERROR_TRANSFER, message.str());
-			return;
-		} else {
-
-			sender_account.RemoveCoins(amount);
-			receiver_account.AddCoins(amount);
-			message << "Transfered to " << receiverName;
-			sender_account.RegisterCoinsTransaction(account::COIN_REMOVE, amount,
-				message.str());
-
-			message.str("");
-			message << "Received from" << sender -> name;
-			receiver_account.RegisterCoinsTransaction(account::COIN_REMOVE,
-				amount, message.str());
-
-			sender_account.GetCoins( & sender_coins);
-			message.str("");
-			message << "You have successfully transfered " << amount << " coins to " << receiverName << ".";
-			sender -> sendStorePurchaseSuccessful(message.str(), sender_coins);
-			if (receiver && !receiver -> isOffline()) {
-				receiver -> sendCoinBalance();
-			}
-		}
 	}
-}
 
-void Game::playerStoreTransactionHistory(uint32_t playerId, uint32_t page)
-{
-	Player* player = getPlayerByID(playerId);
-	if (player) {
-		HistoryStoreOfferList list = IOGameStore::getHistoryEntries(player->getAccount(),page);
-		if (!list.empty()) {
-			player->sendStoreTrasactionHistory(list, page, GameStore::HISTORY_ENTRIES_PER_PAGE);
-		} else {
-			player->sendStoreError(STORE_ERROR_HISTORY, "You don't have any entries yet.");
-		}
+	account::Account sender_account;
+	sender_account.LoadAccountDB(sender->getAccount());
+	account::Account receiver_account;
+	receiver_account.LoadAccountDB(receiver->getAccount());
+	uint32_t sender_coins;
+	sender_account.GetCoins(&sender_coins);
+
+	if (sender->getAccount() == receiver->getAccount()) { // sender and receiver are the same
+		message << "You cannot send coins to your own account.";
+		sender->sendStoreError(STORE_ERROR_TRANSFER, message.str());
+		return;
 	}
+
+	if (sender_coins < amount) {
+		message << "You don't have enough funds to transfer these coins.";
+		sender->sendStoreError(STORE_ERROR_TRANSFER, message.str());
+		return;
+	}
+	
+	sender_account.RemoveCoins(amount);
+	receiver_account.AddCoins(amount);
+	message << "Transfered to " << receiverName;
+	sender_account.RegisterCoinsTransaction(account::COIN_REMOVE, amount, message.str());
+
+	message.str("");
+	message << "Received from" << sender -> name;
+	receiver_account.RegisterCoinsTransaction(account::COIN_REMOVE, amount, message.str());
+
+	sender_account.GetCoins(&sender_coins);
+	message.str("");
+	message << "You have successfully transfered " << amount << " coins to " << receiverName << ".";
+	sender->sendStorePurchaseSuccessful(message.str(), sender_coins);
+	if (receiver && !receiver->isOffline()) {
+		receiver->sendCoinBalance();
+	}
+
+	player->sendCoinBalance();
 }
 
 void Game::parsePlayerExtendedOpcode(uint32_t playerId, uint8_t opcode, const std::string& buffer)
