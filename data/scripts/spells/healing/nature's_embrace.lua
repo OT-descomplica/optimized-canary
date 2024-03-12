@@ -18,7 +18,7 @@ function spell.onCastSpell(creature, var)
 	if creature:isPlayer() and var:getNumber() == creature:getId() then
 		creature:sendCancelMessage("You can't cast this spell to yourself.")
 		creature:getPosition():sendMagicEffect(CONST_ME_POFF)
-	return false
+		return false
 	else
 		return combat:execute(creature, var)
 	end
@@ -28,11 +28,12 @@ spell:group("healing")
 spell:id(242)
 spell:name("Nature's Embrace")
 spell:words("exura gran sio")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_NATURES_EMBRACE)
 spell:level(300)
 spell:mana(400)
 spell:isPremium(true)
 spell:needTarget(true)
-spell:cooldown(1 * 1000)
+spell:cooldown(60 * 1000)
 spell:groupCooldown(1 * 1000)
 spell:isAggressive(false)
 spell:isBlockingWalls(true)

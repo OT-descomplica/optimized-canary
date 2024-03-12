@@ -1,6 +1,6 @@
 local rune = Spell("rune")
 
-local corpseIds = {4240, 4241, 4242, 4243, 4246, 4247, 4248}
+local corpseIds = { 4240, 4241, 4242, 4243, 4246, 4247, 4248 }
 local removalLimit = 500
 
 function rune.onCastSpell(creature, variant, isHotkey)
@@ -26,8 +26,11 @@ function rune.onCastSpell(creature, variant, isHotkey)
 	return true
 end
 
+rune:id(78)
 rune:group("support")
 rune:name("desintegrate rune")
+rune:castSound(SOUND_EFFECT_TYPE_SPELL_OR_RUNE)
+rune:impactSound(SOUND_EFFECT_TYPE_SPELL_DISINTEGRATE_RUNE)
 rune:runeId(3197)
 rune:allowFarUse(false)
 rune:charges(3)

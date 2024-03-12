@@ -1,33 +1,52 @@
 local condition = Condition(CONDITION_OUTFIT)
-condition:setOutfit({lookType = 267})
+condition:setOutfit({ lookType = 267 })
 condition:setTicks(-1)
 
+local conditions = {
+	CONDITION_POISON,
+	CONDITION_FIRE,
+	CONDITION_ENERGY,
+	CONDITION_PARALYZE,
+	CONDITION_DRUNK,
+	CONDITION_DROWN,
+	CONDITION_FREEZING,
+	CONDITION_DAZZLED,
+	CONDITION_CURSED,
+	CONDITION_BLEEDING,
+}
+
 local swimming = MoveEvent()
-swimming:type("stepin")
 
 function swimming.onStepIn(creature, item, position, fromPosition)
-	if not creature:isPlayer() then
+	local player = creature:getPlayer()
+	if not player then
 		return false
 	end
 
-	creature:addCondition(condition)
+	for i = 1, #conditions do
+		player:removeCondition(conditions[i])
+	end
+
+	player:addCondition(condition)
 	return true
 end
 
-swimming:id(629, 630, 631, 632, 633, 634, 4809, 4810, 4811, 4812, 4813, 4814)
+swimming:type("stepin")
+swimming:id(unpack(swimmingTiles))
 swimming:register()
 
-local swimming = MoveEvent()
-swimming:type("stepout")
+swimming = MoveEvent()
 
 function swimming.onStepOut(creature, item, position, fromPosition)
-	if not creature:isPlayer() then
+	local player = creature:getPlayer()
+	if not player then
 		return false
 	end
 
-	creature:removeCondition(CONDITION_OUTFIT)
+	player:removeCondition(CONDITION_OUTFIT)
 	return true
 end
 
-swimming:id(629, 630, 631, 632, 633, 634, 4809, 4810, 4811, 4812, 4813, 4814)
+swimming:type("stepout")
+swimming:id(unpack(swimmingTiles))
 swimming:register()

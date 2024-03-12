@@ -1,12 +1,10 @@
 registerCharm = {}
-setmetatable(registerCharm,
-{
-	__call =
-	function(self, charm, mask)
-		for _,parse in pairs(self) do
+setmetatable(registerCharm, {
+	__call = function(self, charm, mask)
+		for _, parse in pairs(self) do
 			parse(charm, mask)
 		end
-	end
+	end,
 })
 
 Charm.register = function(self, mask)
@@ -22,6 +20,17 @@ end
 registerCharm.description = function(charm, mask)
 	if mask.description then
 		charm:description(mask.description)
+	end
+end
+
+registerCharm.sounds = function(charm, mask)
+	if mask.sounds then
+		if mask.sounds.castSound then
+			charm:castSound(mask.sounds.castSound)
+		end
+		if mask.sounds.impactSound then
+			charm:impactSound(mask.sounds.impactSound)
+		end
 	end
 end
 

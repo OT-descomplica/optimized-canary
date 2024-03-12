@@ -1,12 +1,10 @@
 registerItemClassification = {}
-setmetatable(registerItemClassification,
-{
-	__call =
-	function(self, itemClass, mask)
-		for _,parse in pairs(self) do
+setmetatable(registerItemClassification, {
+	__call = function(self, itemClass, mask)
+		for _, parse in pairs(self) do
 			parse(itemClass, mask)
 		end
-	end
+	end,
 })
 
 ItemClassification.register = function(self, mask)
@@ -16,10 +14,11 @@ end
 registerItemClassification.Upgrades = function(itemClassification, mask)
 	if mask.Upgrades then
 		for _, value in ipairs(mask.Upgrades) do
-			if value.TierId and value.Price then
-				itemClassification:addTier(value.TierId, value.Price)
+			if value.TierId then
+				logger.debug("Registering tier {}, core {}, regular price {}, fusion price {}, transfer price {}", value.TierId, value.Core, value.RegularPrice, value.ConvergenceFustionPrice, value.ConvergenceTransferPrice)
+				itemClassification:addTier(value.TierId, value.Core, value.RegularPrice, value.ConvergenceFustionPrice, value.ConvergenceTransferPrice)
 			else
-				Spdlog.warn("[registerItemClassification.Upgrades] - Item classification failed on adquire TierID or Price attribute.")
+				logger.warn("[registerItemClassification.Upgrades] - Item classification failed on adquire TierID or Price attribute.")
 			end
 		end
 	end

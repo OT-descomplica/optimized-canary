@@ -1,29 +1,17 @@
 /**
- * @file modules.cpp
- *
- * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Canary - A free and open-source MMORPG server emulator
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#include "otpch.h"
+#include "pch.hpp"
 
-#include "lua/modules/modules.h"
-#include "creatures/players/player.h"
-#include "game/game.h"
+#include "lua/modules/modules.hpp"
+#include "creatures/players/player.hpp"
+#include "game/game.hpp"
 
 Modules::Modules() :
 	scriptInterface("Modules Interface") {
@@ -31,16 +19,16 @@ Modules::Modules() :
 }
 
 void Modules::clear(bool) {
-	//clear recvbyte list
-	for (auto& it : recvbyteList) {
+	// clear recvbyte list
+	for (auto &it : recvbyteList) {
 		it.second.clearEvent();
 	}
 
-	//clear lua state
+	// clear lua state
 	scriptInterface.reInitState();
 }
 
-LuaScriptInterface& Modules::getScriptInterface() {
+LuaScriptInterface &Modules::getScriptInterface() {
 	return scriptInterface;
 }
 
@@ -48,17 +36,17 @@ std::string Modules::getScriptBaseName() const {
 	return "modules";
 }
 
-Event_ptr Modules::getEvent(const std::string& nodeName) {
+Event_ptr Modules::getEvent(const std::string &nodeName) {
 	if (strcasecmp(nodeName.c_str(), "module") != 0) {
 		return nullptr;
 	}
 	return Event_ptr(new Module(&scriptInterface));
 }
 
-bool Modules::registerEvent(Event_ptr event, const pugi::xml_node&) {
-	Module_ptr module {static_cast<Module*>(event.release())};
+bool Modules::registerEvent(Event_ptr event, const pugi::xml_node &) {
+	Module_ptr module { static_cast<Module*>(event.release()) };
 	if (module->getEventType() == MODULE_TYPE_NONE) {
-		SPDLOG_ERROR("Trying to register event without type!");
+		g_logger().error("Trying to register event without type!");
 		return false;
 	}
 
@@ -89,13 +77,13 @@ Module* Modules::getEventByRecvbyte(uint8_t recvbyte, bool force) {
 	return nullptr;
 }
 
-void Modules::executeOnRecvbyte(uint32_t playerId, NetworkMessage& msg, uint8_t byte) const {
-	Player* player = g_game().getPlayerByID(playerId);
+void Modules::executeOnRecvbyte(uint32_t playerId, NetworkMessage &msg, uint8_t byte) const {
+	std::shared_ptr<Player> player = g_game().getPlayerByID(playerId);
 	if (!player) {
 		return;
 	}
 
-	for (auto& it : recvbyteList) {
+	for (auto &it : recvbyteList) {
 		Module module = it.second;
 		if (module.getEventType() == MODULE_TYPE_RECVBYTE && module.getRecvbyte() == byte && player->canRunModule(module.getRecvbyte())) {
 			player->setModuleDelay(module.getRecvbyte(), module.getDelay());
@@ -105,16 +93,15 @@ void Modules::executeOnRecvbyte(uint32_t playerId, NetworkMessage& msg, uint8_t 
 	}
 }
 
-
 Module::Module(LuaScriptInterface* interface) :
-	Event(interface), type(MODULE_TYPE_NONE), loaded(false) {}
+	Event(interface), type(MODULE_TYPE_NONE), loaded(false) { }
 
-bool Module::configureEvent(const pugi::xml_node& node) {
+bool Module::configureEvent(const pugi::xml_node &node) {
 	delay = 0;
 
 	pugi::xml_attribute typeAttribute = node.attribute("type");
 	if (!typeAttribute) {
-		SPDLOG_ERROR("Missing type for module.");
+		g_logger().error("Missing type for module.");
 		return false;
 	}
 
@@ -122,14 +109,14 @@ bool Module::configureEvent(const pugi::xml_node& node) {
 	if (tmpStr == "recvbyte") {
 		pugi::xml_attribute byteAttribute = node.attribute("byte");
 		if (!byteAttribute) {
-			SPDLOG_ERROR("Missing byte for module typed recvbyte.");
+			g_logger().error("Missing byte for module typed recvbyte.");
 			return false;
 		}
 
 		recvbyte = static_cast<uint8_t>(byteAttribute.as_int());
 		type = MODULE_TYPE_RECVBYTE;
 	} else {
-		SPDLOG_ERROR("Invalid type for module.");
+		g_logger().error("Invalid type for module.");
 		return false;
 	}
 
@@ -165,11 +152,10 @@ void Module::clearEvent() {
 	loaded = false;
 }
 
-void Module::executeOnRecvbyte(Player* player, NetworkMessage& msg) {
-	//onAdvance(player, skill, oldLevel, newLevel)
+void Module::executeOnRecvbyte(std::shared_ptr<Player> player, NetworkMessage &msg) {
+	// onRecvbyte(player, msg, recvbyte)
 	if (!scriptInterface->reserveScriptEnv()) {
-		SPDLOG_ERROR("Call stack overflow. Too many lua script calls being nested {}",
-			player->getName());
+		g_logger().error("Call stack overflow. Too many lua script calls being nested {}", player->getName());
 		return;
 	}
 
@@ -182,7 +168,7 @@ void Module::executeOnRecvbyte(Player* player, NetworkMessage& msg) {
 	LuaScriptInterface::pushUserdata<Player>(L, player);
 	LuaScriptInterface::setMetatable(L, -1, "Player");
 
-	LuaScriptInterface::pushUserdata<NetworkMessage>(L, &msg);
+	LuaScriptInterface::pushUserdata<NetworkMessage>(L, std::shared_ptr<NetworkMessage>(&msg));
 	LuaScriptInterface::setWeakMetatable(L, -1, "NetworkMessage");
 
 	lua_pushnumber(L, recvbyte);

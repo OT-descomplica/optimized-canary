@@ -26,7 +26,7 @@ function spell.onCastSpell(creature, var)
 
 	local membersList = party:getMembers()
 	membersList[#membersList + 1] = party:getLeader()
-	if membersList == nil or type(membersList) ~= 'table' or #membersList <= 1 then
+	if membersList == nil or type(membersList) ~= "table" or #membersList <= 1 then
 		creature:sendCancelMessage("No party members in range.")
 		position:sendMagicEffect(CONST_ME_POFF)
 		return false
@@ -73,6 +73,7 @@ spell:name("Heal Party")
 spell:words("utura mas sio")
 spell:group("support")
 spell:vocation("druid;true", "elder druid;true")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_HEAL_PARTY)
 spell:id(128)
 spell:cooldown(2 * 1000)
 spell:groupCooldown(2 * 1000)

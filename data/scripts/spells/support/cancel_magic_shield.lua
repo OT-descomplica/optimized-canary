@@ -1,4 +1,3 @@
-
 local combat = Combat()
 combat:setParameter(COMBAT_PARAM_EFFECT, CONST_ME_MAGIC_BLUE)
 combat:setParameter(COMBAT_PARAM_AGGRESSIVE, 0)
@@ -14,6 +13,7 @@ spell:group("support")
 spell:id(245)
 spell:name("Cancel Magic Shield")
 spell:words("exana vita")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_CANCEL_MAGIC_SHIELD)
 spell:level(14)
 spell:mana(50)
 spell:isAggressive(false)

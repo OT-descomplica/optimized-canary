@@ -8,6 +8,7 @@ function onGetFormulaValues(player, level, maglevel)
 	local max = (level / 5) + (maglevel * 2) + 12
 	return -min, -max
 end
+
 combat:setCallback(CALLBACK_PARAM_LEVELMAGICVALUE, "onGetFormulaValues")
 
 local spell = Spell("instant")
@@ -20,6 +21,8 @@ spell:group("attack")
 spell:id(121)
 spell:name("Ice Wave")
 spell:words("exevo frigo hur")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_OR_RUNE)
+spell:impactSound(SOUND_EFFECT_TYPE_SPELL_ICE_WAVE)
 spell:level(18)
 spell:mana(25)
 spell:needDirection(true)

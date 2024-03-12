@@ -16,20 +16,23 @@ function rune.onCastSpell(creature, variant, isHotkey)
 		item = Tile(position):getTopDownItem()
 	end
 
-	if not item or item.itemid == 0 or not isMoveable(item.uid) then
+	if not item or item.itemid == 0 or not isMovable(item.uid) then
 		creature:sendCancelMessage(RETURNVALUE_NOTPOSSIBLE)
 		creature:getPosition():sendMagicEffect(CONST_ME_POFF)
 		return false
 	end
 
-	condition:setOutfit({lookTypeEx = item.itemid})
+	condition:setOutfit({ lookTypeEx = item.itemid })
 	creature:addCondition(condition)
 	creature:getPosition():sendMagicEffect(CONST_ME_MAGIC_RED)
 	return true
 end
 
+rune:id(14)
 rune:group("support")
 rune:name("chameleon rune")
+rune:castSound(SOUND_EFFECT_TYPE_SPELL_OR_RUNE)
+rune:impactSound(SOUND_EFFECT_TYPE_SPELL_CHAMELEON_RUNE)
 rune:runeId(3178)
 rune:allowFarUse(true)
 rune:charges(1)

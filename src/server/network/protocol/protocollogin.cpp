@@ -1,118 +1,105 @@
 /**
- * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019  Mark Samman <mark.samman@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Canary - A free and open-source MMORPG server emulator
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#include "otpch.h"
+#include "pch.hpp"
 
-#include "server/network/protocol/protocollogin.h"
+#include "server/network/protocol/protocollogin.hpp"
+#include "server/network/message/outputmessage.hpp"
+#include "game/scheduling/dispatcher.hpp"
+#include "account/account.hpp"
+#include "io/iologindata.hpp"
+#include "creatures/players/management/ban.hpp"
+#include "game/game.hpp"
+#include "core.hpp"
+#include "enums/account_errors.hpp"
 
-#include "server/network/message/outputmessage.h"
-#include "security/rsa.h"
-#include "game/scheduling/tasks.h"
-#include "creatures/players/account/account.hpp"
-#include "io/iologindata.h"
-#include "creatures/players/management/ban.h"
-#include "game/game.h"
-
-#include <algorithm>
-#include <limits>
-#include <vector>
-
-
-void ProtocolLogin::disconnectClient(const std::string& message, uint16_t version)
-{
+void ProtocolLogin::disconnectClient(const std::string &message) {
 	auto output = OutputMessagePool::getOutputMessage();
 
-	output->addByte(version >= 1076 ? 0x0B : 0x0A);
-	output->addString(message);
+	output->addByte(0x0B);
+	output->addString(message, "ProtocolLogin::disconnectClient - message");
 	send(output);
 
 	disconnect();
 }
 
-void ProtocolLogin::getCharacterList(const std::string& email, const std::string& password, uint16_t version)
-{
-	account::Account account;
-	if (!IOLoginData::authenticateAccountPassword(email, password, &account)) {
-		disconnectClient("Email or password is not correct", version);
+void ProtocolLogin::getCharacterList(const std::string &accountDescriptor, const std::string &password) {
+	Account account(accountDescriptor);
+	account.setProtocolCompat(oldProtocol);
+
+	if (oldProtocol && !g_configManager().getBoolean(OLD_PROTOCOL, __FUNCTION__)) {
+		disconnectClient(fmt::format("Only protocol version {}.{} is allowed.", CLIENT_VERSION_UPPER, CLIENT_VERSION_LOWER));
+		return;
+	} else if (!oldProtocol) {
+		disconnectClient(fmt::format("Only protocol version {}.{} or outdated 11.00 is allowed.", CLIENT_VERSION_UPPER, CLIENT_VERSION_LOWER));
 		return;
 	}
 
-	// Update premium days
-	Game::updatePremium(account);
+	if (account.load() != enumToValue(AccountErrors_t::Ok) || !account.authenticate(password)) {
+		std::ostringstream ss;
+		ss << (oldProtocol ? "Username" : "Email") << " or password is not correct.";
+		disconnectClient(ss.str());
+		return;
+	}
 
 	auto output = OutputMessagePool::getOutputMessage();
-	const std::string& motd = g_configManager().getString(MOTD);
+	const std::string &motd = g_configManager().getString(SERVER_MOTD, __FUNCTION__);
 	if (!motd.empty()) {
 		// Add MOTD
 		output->addByte(0x14);
 
 		std::ostringstream ss;
-		ss << g_game().getMotdNum() << "\n" << motd;
-		output->addString(ss.str());
+		ss << g_game().getMotdNum() << "\n"
+		   << motd;
+		output->addString(ss.str(), "ProtocolLogin::getCharacterList - ss.str()");
 	}
 
 	// Add session key
 	output->addByte(0x28);
-	output->addString(email + "\n" + password);
+	output->addString(accountDescriptor + "\n" + password, "ProtocolLogin::getCharacterList - accountDescriptor + password");
 
 	// Add char list
-	std::vector<account::Player> players;
-	account.GetAccountPlayers(&players);
-	output->addByte(0x64);
-
-	output->addByte(1);  // number of worlds
-
-	output->addByte(0);  // world id
-	output->addString(g_configManager().getString(SERVER_NAME));
-	output->addString(g_configManager().getString(IP));
-
-	output->add<uint16_t>(g_configManager().getShortNumber(GAME_PORT));
-
-	output->addByte(0);
-
-	uint8_t size = std::min<size_t>(std::numeric_limits<uint8_t>::max(),
-                                  players.size());
-	output->addByte(size);
-	for (uint8_t i = 0; i < size; i++) {
-		output->addByte(0);
-		output->addString(players[i].name);
+	auto [players, result] = account.getAccountPlayers();
+	if (enumToValue(AccountErrors_t::Ok) != result) {
+		g_logger().warn("Account[{}] failed to load players!", account.getID());
 	}
 
-	// Add premium days
+	output->addByte(0x64);
+
+	output->addByte(1); // number of worlds
+
+	output->addByte(0); // world id
+	output->addString(g_configManager().getString(SERVER_NAME, __FUNCTION__), "ProtocolLogin::getCharacterList - _configManager().getString(SERVER_NAME)");
+	output->addString(g_configManager().getString(IP, __FUNCTION__), "ProtocolLogin::getCharacterList - g_configManager().getString(IP)");
+
+	output->add<uint16_t>(g_configManager().getNumber(GAME_PORT, __FUNCTION__));
+
 	output->addByte(0);
-	if (g_configManager().getBoolean(FREE_PREMIUM)) {
-		output->addByte(1);
-		output->add<uint32_t>(0);
-	} else {
-	uint32_t days;
-	account.GetPremiumRemaningDays(&days);
-	output->addByte(0);
-	output->add<uint32_t>(time(nullptr) + (days * 86400));
-  }
+
+	uint8_t size = std::min<size_t>(std::numeric_limits<uint8_t>::max(), players.size());
+	output->addByte(size);
+	for (const auto &[name, deletion] : players) {
+		output->addByte(0);
+		output->addString(name, "ProtocolLogin::getCharacterList - name");
+	}
+
+	// Get premium days, check is premium and get lastday
+	output->addByte(account.getPremiumRemainingDays());
+	output->addByte(account.getPremiumLastDay() > getTimeNow());
+	output->add<uint32_t>(account.getPremiumLastDay());
 
 	send(output);
 
 	disconnect();
 }
 
-void ProtocolLogin::onRecvFirstMessage(NetworkMessage& msg)
-{
+void ProtocolLogin::onRecvFirstMessage(NetworkMessage &msg) {
 	if (g_game().getGameState() == GAME_STATE_SHUTDOWN) {
 		disconnect();
 		return;
@@ -121,6 +108,9 @@ void ProtocolLogin::onRecvFirstMessage(NetworkMessage& msg)
 	msg.skipBytes(2); // client OS
 
 	uint16_t version = msg.get<uint16_t>();
+
+	// Old protocol support
+	oldProtocol = version == 1100;
 
 	msg.skipBytes(17);
 	/*
@@ -131,24 +121,24 @@ void ProtocolLogin::onRecvFirstMessage(NetworkMessage& msg)
 	 */
 
 	if (!Protocol::RSA_decrypt(msg)) {
-		SPDLOG_WARN("[ProtocolLogin::onRecvFirstMessage] - RSA Decrypt Failed");
+		g_logger().warn("[ProtocolLogin::onRecvFirstMessage] - RSA Decrypt Failed");
 		disconnect();
 		return;
 	}
 
-	std::array<uint32_t, 4> key = {msg.get<uint32_t>(), msg.get<uint32_t>(), msg.get<uint32_t>(), msg.get<uint32_t>()};
+	std::array<uint32_t, 4> key = { msg.get<uint32_t>(), msg.get<uint32_t>(), msg.get<uint32_t>(), msg.get<uint32_t>() };
 	enableXTEAEncryption();
 	setXTEAKey(key.data());
 
 	setChecksumMethod(CHECKSUM_METHOD_ADLER32);
 
 	if (g_game().getGameState() == GAME_STATE_STARTUP) {
-		disconnectClient("Gameworld is starting up. Please wait.", version);
+		disconnectClient("Gameworld is starting up. Please wait.");
 		return;
 	}
 
 	if (g_game().getGameState() == GAME_STATE_MAINTAIN) {
-		disconnectClient("Gameworld is under maintenance.\nPlease re-connect in a while.", version);
+		disconnectClient("Gameworld is under maintenance.\nPlease re-connect in a while.");
 		return;
 	}
 
@@ -164,23 +154,26 @@ void ProtocolLogin::onRecvFirstMessage(NetworkMessage& msg)
 		}
 
 		std::ostringstream ss;
-		ss << "Your IP has been banned until " << formatDateShort(banInfo.expiresAt) << " by " << banInfo.bannedBy << ".\n\nReason specified:\n" << banInfo.reason;
-		disconnectClient(ss.str(), version);
+		ss << "Your IP has been banned until " << formatDateShort(banInfo.expiresAt) << " by " << banInfo.bannedBy << ".\n\nReason specified:\n"
+		   << banInfo.reason;
+		disconnectClient(ss.str());
 		return;
 	}
 
-	std::string email = msg.getString();
-	if (email.empty()) {
-		disconnectClient("Invalid email.", version);
+	std::string accountDescriptor = msg.getString();
+	if (accountDescriptor.empty()) {
+		std::ostringstream ss;
+		ss << "Invalid " << (oldProtocol ? "username" : "email") << ".";
+		disconnectClient(ss.str());
 		return;
 	}
 
 	std::string password = msg.getString();
 	if (password.empty()) {
-		disconnectClient("Invalid password.", version);
+		disconnectClient("Invalid password.");
 		return;
 	}
 
 	auto thisPtr = std::static_pointer_cast<ProtocolLogin>(shared_from_this());
-	g_dispatcher().addTask(createTask(std::bind(&ProtocolLogin::getCharacterList, thisPtr, email, password, version)));
+	g_dispatcher().addEvent(std::bind(&ProtocolLogin::getCharacterList, thisPtr, accountDescriptor, password), "ProtocolLogin::getCharacterList");
 }

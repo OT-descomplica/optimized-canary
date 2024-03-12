@@ -1,35 +1,24 @@
 /**
  * Canary - A free and open-source MMORPG server emulator
- * Copyright (C) 2021 OpenTibiaBR <opentibiabr@outlook.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#include "otpch.h"
+#include "pch.hpp"
 
-#include "creatures/combat/spells.h"
-#include "creatures/players/vocations/vocation.h"
+#include "creatures/combat/spells.hpp"
+#include "creatures/players/vocations/vocation.hpp"
 #include "lua/functions/creatures/combat/spell_functions.hpp"
-
 
 int SpellFunctions::luaSpellCreate(lua_State* L) {
 	// Spell(words, name or id) to get an existing spell
 	// Spell(type) ex: Spell(SPELL_INSTANT) or Spell(SPELL_RUNE) to create a new spell
 	if (lua_gettop(L) == 1) {
-		SPDLOG_ERROR("[SpellFunctions::luaSpellCreate] - "
-					 "There is no parameter set!");
+		g_logger().error("[SpellFunctions::luaSpellCreate] - "
+						 "There is no parameter set!");
 		lua_pushnil(L);
 		return 1;
 	}
@@ -37,8 +26,8 @@ int SpellFunctions::luaSpellCreate(lua_State* L) {
 	SpellType_t spellType = SPELL_UNDEFINED;
 
 	if (isNumber(L, 2)) {
-		int32_t id = getNumber<int32_t>(L, 2);
-		RuneSpell* rune = g_spells().getRuneSpell(id);
+		uint16_t id = getNumber<uint16_t>(L, 2);
+		std::shared_ptr<RuneSpell> rune = g_spells().getRuneSpell(id);
 
 		if (rune) {
 			pushUserdata<Spell>(L, rune);
@@ -49,7 +38,7 @@ int SpellFunctions::luaSpellCreate(lua_State* L) {
 		spellType = static_cast<SpellType_t>(id);
 	} else if (isString(L, 2)) {
 		std::string arg = getString(L, 2);
-		InstantSpell* instant = g_spells().getInstantSpellByName(arg);
+		std::shared_ptr<InstantSpell> instant = g_spells().getInstantSpellByName(arg);
 		if (instant) {
 			pushUserdata<Spell>(L, instant);
 			setMetatable(L, -1, "Spell");
@@ -61,7 +50,7 @@ int SpellFunctions::luaSpellCreate(lua_State* L) {
 			setMetatable(L, -1, "Spell");
 			return 1;
 		}
-		RuneSpell* rune = g_spells().getRuneSpellByName(arg);
+		std::shared_ptr<RuneSpell> rune = g_spells().getRuneSpellByName(arg);
 		if (rune) {
 			pushUserdata<Spell>(L, rune);
 			setMetatable(L, -1, "Spell");
@@ -77,18 +66,16 @@ int SpellFunctions::luaSpellCreate(lua_State* L) {
 	}
 
 	if (spellType == SPELL_INSTANT) {
-		InstantSpell* spell = new InstantSpell(getScriptEnv()->getScriptInterface());
-		spell->fromLua = true;
+		auto spell = std::make_shared<InstantSpell>(getScriptEnv()->getScriptInterface());
 		pushUserdata<Spell>(L, spell);
 		setMetatable(L, -1, "Spell");
 		spell->spellType = SPELL_INSTANT;
 		return 1;
 	} else if (spellType == SPELL_RUNE) {
-		RuneSpell* spell = new RuneSpell(getScriptEnv()->getScriptInterface());
-		spell->fromLua = true;
-		pushUserdata<Spell>(L, spell);
+		auto runeSpell = std::make_shared<RuneSpell>(getScriptEnv()->getScriptInterface());
+		pushUserdata<Spell>(L, runeSpell);
 		setMetatable(L, -1, "Spell");
-		spell->spellType = SPELL_RUNE;
+		runeSpell->spellType = SPELL_RUNE;
 		return 1;
 	}
 
@@ -98,23 +85,25 @@ int SpellFunctions::luaSpellCreate(lua_State* L) {
 
 int SpellFunctions::luaSpellOnCastSpell(lua_State* L) {
 	// spell:onCastSpell(callback)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (spell->spellType == SPELL_INSTANT) {
-			InstantSpell* instant = dynamic_cast<InstantSpell*>(getUserdata<Spell>(L, 1));
+			const auto spellBase = getUserdataShared<Spell>(L, 1);
+			const auto instant = std::static_pointer_cast<InstantSpell>(spellBase);
 			if (!instant->loadCallback()) {
 				pushBoolean(L, false);
 				return 1;
 			}
-			instant->scripted = true;
+			instant->setLoadedCallback(true);
 			pushBoolean(L, true);
 		} else if (spell->spellType == SPELL_RUNE) {
-			RuneSpell* rune = dynamic_cast<RuneSpell*>(getUserdata<Spell>(L, 1));
+			std::shared_ptr<Spell> spellBase = getUserdataShared<Spell>(L, 1);
+			std::shared_ptr<RuneSpell> rune = std::static_pointer_cast<RuneSpell>(spellBase);
 			if (!rune->loadCallback()) {
 				pushBoolean(L, false);
 				return 1;
 			}
-			rune->scripted = true;
+			rune->setLoadedCallback(true);
 			pushBoolean(L, true);
 		}
 	} else {
@@ -125,8 +114,7 @@ int SpellFunctions::luaSpellOnCastSpell(lua_State* L) {
 
 int SpellFunctions::luaSpellRegister(lua_State* L) {
 	// spell:register()
-	Spell* spell = getUserdata<Spell>(L, 1);
-
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (!spell) {
 		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
 		pushBoolean(L, false);
@@ -134,17 +122,19 @@ int SpellFunctions::luaSpellRegister(lua_State* L) {
 	}
 
 	if (spell->spellType == SPELL_INSTANT) {
-		InstantSpell* instant = dynamic_cast<InstantSpell*>(getUserdata<Spell>(L, 1));
-		if (!instant->isScripted()) {
+		const auto spellBase = getUserdataShared<Spell>(L, 1);
+		const auto instant = std::static_pointer_cast<InstantSpell>(spellBase);
+		if (!instant->isLoadedCallback()) {
 			pushBoolean(L, false);
 			return 1;
 		}
 		pushBoolean(L, g_spells().registerInstantLuaEvent(instant));
 	} else if (spell->spellType == SPELL_RUNE) {
-		RuneSpell* rune = dynamic_cast<RuneSpell*>(getUserdata<Spell>(L, 1));
+		const auto spellBase = getUserdataShared<Spell>(L, 1);
+		const auto rune = std::static_pointer_cast<RuneSpell>(spellBase);
 		if (rune->getMagicLevel() != 0 || rune->getLevel() != 0) {
 			// Change information in the ItemType to get accurate description
-			ItemType& iType = Item::items.getItemType(rune->getRuneItemId());
+			ItemType &iType = Item::items.getItemType(rune->getRuneItemId());
 			// If the item is not registered in items.xml then we will register it by rune name
 			if (iType.name.empty()) {
 				iType.name = rune->getName();
@@ -153,7 +143,7 @@ int SpellFunctions::luaSpellRegister(lua_State* L) {
 			iType.runeLevel = rune->getLevel();
 			iType.charges = rune->getCharges();
 		}
-		if (!rune->isScripted()) {
+		if (!rune->isLoadedCallback()) {
 			pushBoolean(L, false);
 			return 1;
 		}
@@ -165,7 +155,7 @@ int SpellFunctions::luaSpellRegister(lua_State* L) {
 int SpellFunctions::luaSpellName(lua_State* L) {
 
 	// spell:name(name)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			pushString(L, spell->getName());
@@ -181,18 +171,17 @@ int SpellFunctions::luaSpellName(lua_State* L) {
 
 int SpellFunctions::luaSpellId(lua_State* L) {
 	// spell:id(id)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
-		if (spell->spellType != SPELL_INSTANT) {
-			reportErrorFunc("The method: 'spell:id(id)' is only for use of instant spells");
+		if (spell->spellType != SPELL_INSTANT && spell->spellType != SPELL_RUNE) {
+			reportErrorFunc("The method: 'spell:id(id)' is only for use of instant spells and rune spells");
 			pushBoolean(L, false);
 			return 1;
 		}
-
 		if (lua_gettop(L) == 1) {
-			lua_pushnumber(L, spell->getId());
+			lua_pushnumber(L, spell->getSpellId());
 		} else {
-			spell->setId(getNumber<uint8_t>(L, 2));
+			spell->setSpellId(getNumber<uint16_t>(L, 2));
 			pushBoolean(L, true);
 		}
 	} else {
@@ -203,7 +192,7 @@ int SpellFunctions::luaSpellId(lua_State* L) {
 
 int SpellFunctions::luaSpellGroup(lua_State* L) {
 	// spell:group(primaryGroup[, secondaryGroup])
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, spell->getGroup());
@@ -219,15 +208,17 @@ int SpellFunctions::luaSpellGroup(lua_State* L) {
 				if (group != SPELLGROUP_NONE) {
 					spell->setGroup(group);
 				} else {
-					SPDLOG_WARN("[SpellFunctions::luaSpellGroup] - "
-								"Unknown group: {}", getString(L, 2));
+					g_logger().warn("[SpellFunctions::luaSpellGroup] - "
+									"Unknown group: {}",
+									getString(L, 2));
 					pushBoolean(L, false);
 					return 1;
 				}
 				pushBoolean(L, true);
 			} else {
-				SPDLOG_WARN("[SpellFunctions::luaSpellGroup] - "
-							"Unknown group: {}", getString(L, 2));
+				g_logger().warn("[SpellFunctions::luaSpellGroup] - "
+								"Unknown group: {}",
+								getString(L, 2));
 				pushBoolean(L, false);
 				return 1;
 			}
@@ -243,8 +234,9 @@ int SpellFunctions::luaSpellGroup(lua_State* L) {
 				if (primaryGroup != SPELLGROUP_NONE) {
 					spell->setGroup(primaryGroup);
 				} else {
-					SPDLOG_WARN("[SpellFunctions::luaSpellGroup] - "
-								"Unknown primaryGroup: {}", getString(L, 2));
+					g_logger().warn("[SpellFunctions::luaSpellGroup] - "
+									"Unknown primaryGroup: {}",
+									getString(L, 2));
 					pushBoolean(L, false);
 					return 1;
 				}
@@ -252,16 +244,17 @@ int SpellFunctions::luaSpellGroup(lua_State* L) {
 				if (secondaryGroup != SPELLGROUP_NONE) {
 					spell->setSecondaryGroup(secondaryGroup);
 				} else {
-					SPDLOG_WARN("[SpellFunctions::luaSpellGroup] - "
-								"Unknown secondaryGroup: {}", getString(L, 3));
+					g_logger().warn("[SpellFunctions::luaSpellGroup] - "
+									"Unknown secondaryGroup: {}",
+									getString(L, 3));
 					pushBoolean(L, false);
 					return 1;
 				}
 				pushBoolean(L, true);
 			} else {
-				SPDLOG_WARN("[SpellFunctions::luaSpellGroup] - "
-							"Unknown primaryGroup: {} or secondaryGroup: {}",
-							getString(L, 2), getString(L, 3));
+				g_logger().warn("[SpellFunctions::luaSpellGroup] - "
+								"Unknown primaryGroup: {} or secondaryGroup: {}",
+								getString(L, 2), getString(L, 3));
 				pushBoolean(L, false);
 				return 1;
 			}
@@ -272,9 +265,41 @@ int SpellFunctions::luaSpellGroup(lua_State* L) {
 	return 1;
 }
 
+int SpellFunctions::luaSpellCastSound(lua_State* L) {
+	// get: spell:castSound() set: spell:castSound(effect)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (spell) {
+		if (lua_gettop(L) == 1) {
+			lua_pushnumber(L, static_cast<uint16_t>(spell->soundCastEffect));
+		} else {
+			spell->soundCastEffect = static_cast<SoundEffect_t>(getNumber<uint16_t>(L, 2));
+			pushBoolean(L, true);
+		}
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellImpactSound(lua_State* L) {
+	// get: spell:impactSound() set: spell:impactSound(effect)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (spell) {
+		if (lua_gettop(L) == 1) {
+			lua_pushnumber(L, static_cast<uint16_t>(spell->soundImpactEffect));
+		} else {
+			spell->soundImpactEffect = static_cast<SoundEffect_t>(getNumber<uint16_t>(L, 2));
+			pushBoolean(L, true);
+		}
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
 int SpellFunctions::luaSpellCooldown(lua_State* L) {
 	// spell:cooldown(cooldown)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, spell->getCooldown());
@@ -290,7 +315,7 @@ int SpellFunctions::luaSpellCooldown(lua_State* L) {
 
 int SpellFunctions::luaSpellGroupCooldown(lua_State* L) {
 	// spell:groupCooldown(primaryGroupCd[, secondaryGroupCd])
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, spell->getGroupCooldown());
@@ -312,7 +337,7 @@ int SpellFunctions::luaSpellGroupCooldown(lua_State* L) {
 
 int SpellFunctions::luaSpellLevel(lua_State* L) {
 	// spell:level(lvl)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, spell->getLevel());
@@ -328,7 +353,7 @@ int SpellFunctions::luaSpellLevel(lua_State* L) {
 
 int SpellFunctions::luaSpellMagicLevel(lua_State* L) {
 	// spell:magicLevel(lvl)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, spell->getMagicLevel());
@@ -344,7 +369,7 @@ int SpellFunctions::luaSpellMagicLevel(lua_State* L) {
 
 int SpellFunctions::luaSpellMana(lua_State* L) {
 	// spell:mana(mana)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, spell->getMana());
@@ -360,7 +385,7 @@ int SpellFunctions::luaSpellMana(lua_State* L) {
 
 int SpellFunctions::luaSpellManaPercent(lua_State* L) {
 	// spell:manaPercent(percent)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, spell->getManaPercent());
@@ -376,7 +401,7 @@ int SpellFunctions::luaSpellManaPercent(lua_State* L) {
 
 int SpellFunctions::luaSpellSoul(lua_State* L) {
 	// spell:soul(soul)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, spell->getSoulCost());
@@ -392,7 +417,7 @@ int SpellFunctions::luaSpellSoul(lua_State* L) {
 
 int SpellFunctions::luaSpellRange(lua_State* L) {
 	// spell:range(range)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, spell->getRange());
@@ -408,7 +433,7 @@ int SpellFunctions::luaSpellRange(lua_State* L) {
 
 int SpellFunctions::luaSpellPremium(lua_State* L) {
 	// spell:isPremium(bool)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, spell->isPremium());
@@ -424,7 +449,7 @@ int SpellFunctions::luaSpellPremium(lua_State* L) {
 
 int SpellFunctions::luaSpellEnabled(lua_State* L) {
 	// spell:isEnabled(bool)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, spell->isEnabled());
@@ -440,7 +465,7 @@ int SpellFunctions::luaSpellEnabled(lua_State* L) {
 
 int SpellFunctions::luaSpellNeedTarget(lua_State* L) {
 	// spell:needTarget(bool)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, spell->getNeedTarget());
@@ -456,7 +481,7 @@ int SpellFunctions::luaSpellNeedTarget(lua_State* L) {
 
 int SpellFunctions::luaSpellNeedWeapon(lua_State* L) {
 	// spell:needWeapon(bool)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, spell->getNeedWeapon());
@@ -472,7 +497,7 @@ int SpellFunctions::luaSpellNeedWeapon(lua_State* L) {
 
 int SpellFunctions::luaSpellNeedLearn(lua_State* L) {
 	// spell:needLearn(bool)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, spell->getNeedLearn());
@@ -488,8 +513,7 @@ int SpellFunctions::luaSpellNeedLearn(lua_State* L) {
 
 int SpellFunctions::luaSpellSelfTarget(lua_State* L) {
 	// spell:isSelfTarget(bool)
-	Spell* spell = getUserdata<Spell>(L, 1);
-	if (spell) {
+	if (const auto spell = getUserdataShared<Spell>(L, 1)) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, spell->getSelfTarget());
 		} else {
@@ -504,8 +528,7 @@ int SpellFunctions::luaSpellSelfTarget(lua_State* L) {
 
 int SpellFunctions::luaSpellBlocking(lua_State* L) {
 	// spell:isBlocking(blockingSolid, blockingCreature)
-	Spell* spell = getUserdata<Spell>(L, 1);
-	if (spell) {
+	if (const auto spell = getUserdataShared<Spell>(L, 1)) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, spell->getBlockingSolid());
 			pushBoolean(L, spell->getBlockingCreature());
@@ -523,7 +546,7 @@ int SpellFunctions::luaSpellBlocking(lua_State* L) {
 
 int SpellFunctions::luaSpellAggressive(lua_State* L) {
 	// spell:isAggressive(bool)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, spell->getAggressive());
@@ -537,10 +560,9 @@ int SpellFunctions::luaSpellAggressive(lua_State* L) {
 	return 1;
 }
 
-int SpellFunctions::luaSpellAllowOnSelf(lua_State* L)
-{
+int SpellFunctions::luaSpellAllowOnSelf(lua_State* L) {
 	// spell:allowOnSelf(bool)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, spell->getAllowOnSelf());
@@ -554,10 +576,9 @@ int SpellFunctions::luaSpellAllowOnSelf(lua_State* L)
 	return 1;
 }
 
-int SpellFunctions::luaSpellPzLocked(lua_State* L)
-{
+int SpellFunctions::luaSpellPzLocked(lua_State* L) {
 	// spell:isPzLocked(bool)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, spell->getLockedPZ());
@@ -573,7 +594,7 @@ int SpellFunctions::luaSpellPzLocked(lua_State* L)
 
 int SpellFunctions::luaSpellVocation(lua_State* L) {
 	// spell:vocation(vocation)
-	Spell* spell = getUserdata<Spell>(L, 1);
+	const auto spell = getUserdataShared<Spell>(L, 1);
 	if (spell) {
 		if (lua_gettop(L) == 1) {
 			lua_createtable(L, 0, 0);
@@ -581,7 +602,7 @@ int SpellFunctions::luaSpellVocation(lua_State* L) {
 			for (auto voc : spell->getVocMap()) {
 				++it;
 				std::string s = std::to_string(it);
-				char const *pchar = s.c_str();
+				const char* pchar = s.c_str();
 				std::string name = g_vocations().getVocation(voc.first)->getVocName();
 				setField(L, pchar, name);
 			}
@@ -615,7 +636,8 @@ int SpellFunctions::luaSpellVocation(lua_State* L) {
 // only for InstantSpells
 int SpellFunctions::luaSpellWords(lua_State* L) {
 	// spell:words(words[, separator = ""])
-	InstantSpell* spell = dynamic_cast<InstantSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<InstantSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_INSTANT, it means that this actually is no InstantSpell, so we return nil
 		if (spell->spellType != SPELL_INSTANT) {
@@ -645,7 +667,8 @@ int SpellFunctions::luaSpellWords(lua_State* L) {
 // only for InstantSpells
 int SpellFunctions::luaSpellNeedDirection(lua_State* L) {
 	// spell:needDirection(bool)
-	InstantSpell* spell = dynamic_cast<InstantSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<InstantSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_INSTANT, it means that this actually is no InstantSpell, so we return nil
 		if (spell->spellType != SPELL_INSTANT) {
@@ -668,7 +691,8 @@ int SpellFunctions::luaSpellNeedDirection(lua_State* L) {
 // only for InstantSpells
 int SpellFunctions::luaSpellHasParams(lua_State* L) {
 	// spell:hasParams(bool)
-	InstantSpell* spell = dynamic_cast<InstantSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<InstantSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_INSTANT, it means that this actually is no InstantSpell, so we return nil
 		if (spell->spellType != SPELL_INSTANT) {
@@ -691,7 +715,8 @@ int SpellFunctions::luaSpellHasParams(lua_State* L) {
 // only for InstantSpells
 int SpellFunctions::luaSpellHasPlayerNameParam(lua_State* L) {
 	// spell:hasPlayerNameParam(bool)
-	InstantSpell* spell = dynamic_cast<InstantSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<InstantSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_INSTANT, it means that this actually is no InstantSpell, so we return nil
 		if (spell->spellType != SPELL_INSTANT) {
@@ -714,7 +739,8 @@ int SpellFunctions::luaSpellHasPlayerNameParam(lua_State* L) {
 // only for InstantSpells
 int SpellFunctions::luaSpellNeedCasterTargetOrDirection(lua_State* L) {
 	// spell:needCasterTargetOrDirection(bool)
-	InstantSpell* spell = dynamic_cast<InstantSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<InstantSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_INSTANT, it means that this actually is no InstantSpell, so we return nil
 		if (spell->spellType != SPELL_INSTANT) {
@@ -737,7 +763,8 @@ int SpellFunctions::luaSpellNeedCasterTargetOrDirection(lua_State* L) {
 // only for InstantSpells
 int SpellFunctions::luaSpellIsBlockingWalls(lua_State* L) {
 	// spell:blockWalls(bool)
-	InstantSpell* spell = dynamic_cast<InstantSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<InstantSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_INSTANT, it means that this actually is no InstantSpell, so we return nil
 		if (spell->spellType != SPELL_INSTANT) {
@@ -760,7 +787,8 @@ int SpellFunctions::luaSpellIsBlockingWalls(lua_State* L) {
 // only for RuneSpells
 int SpellFunctions::luaSpellRuneId(lua_State* L) {
 	// spell:runeId(id)
-	RuneSpell* spell = dynamic_cast<RuneSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<RuneSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_RUNE, it means that this actually is no RuneSpell, so we return nil
 		if (spell->spellType != SPELL_RUNE) {
@@ -783,7 +811,8 @@ int SpellFunctions::luaSpellRuneId(lua_State* L) {
 // only for RuneSpells
 int SpellFunctions::luaSpellCharges(lua_State* L) {
 	// spell:charges(charges)
-	RuneSpell* spell = dynamic_cast<RuneSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<RuneSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_RUNE, it means that this actually is no RuneSpell, so we return nil
 		if (spell->spellType != SPELL_RUNE) {
@@ -806,7 +835,8 @@ int SpellFunctions::luaSpellCharges(lua_State* L) {
 // only for RuneSpells
 int SpellFunctions::luaSpellAllowFarUse(lua_State* L) {
 	// spell:allowFarUse(bool)
-	RuneSpell* spell = dynamic_cast<RuneSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<RuneSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_RUNE, it means that this actually is no RuneSpell, so we return nil
 		if (spell->spellType != SPELL_RUNE) {
@@ -829,7 +859,8 @@ int SpellFunctions::luaSpellAllowFarUse(lua_State* L) {
 // only for RuneSpells
 int SpellFunctions::luaSpellBlockWalls(lua_State* L) {
 	// spell:blockWalls(bool)
-	RuneSpell* spell = dynamic_cast<RuneSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<RuneSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_RUNE, it means that this actually is no RuneSpell, so we return nil
 		if (spell->spellType != SPELL_RUNE) {
@@ -852,7 +883,8 @@ int SpellFunctions::luaSpellBlockWalls(lua_State* L) {
 // only for RuneSpells
 int SpellFunctions::luaSpellCheckFloor(lua_State* L) {
 	// spell:checkFloor(bool)
-	RuneSpell* spell = dynamic_cast<RuneSpell*>(getUserdata<Spell>(L, 1));
+	const auto spellBase = getUserdataShared<Spell>(L, 1);
+	const auto spell = std::static_pointer_cast<RuneSpell>(spellBase);
 	if (spell) {
 		// if spell != SPELL_RUNE, it means that this actually is no RuneSpell, so we return nil
 		if (spell->spellType != SPELL_RUNE) {
@@ -868,6 +900,239 @@ int SpellFunctions::luaSpellCheckFloor(lua_State* L) {
 		}
 	} else {
 		lua_pushnil(L);
+	}
+	return 1;
+}
+
+// Wheel of destiny
+int SpellFunctions::luaSpellManaWOD(lua_State* L) {
+	// spell:manaWOD(grade, mana)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::MANA, grade));
+	} else {
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::MANA, grade, getNumber<int32_t>(L, 3));
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellCooldownWOD(lua_State* L) {
+	// spell:cooldownWOD(grade, time)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::COOLDOWN, grade));
+	} else {
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::COOLDOWN, grade, getNumber<int32_t>(L, 3));
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellGroupCooldownWOD(lua_State* L) {
+	// spell:groupCooldownWOD(grade, time)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::GROUP_COOLDOWN, grade));
+	} else {
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::GROUP_COOLDOWN, grade, getNumber<int32_t>(L, 3));
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellSecondaryGroupCooldownWOD(lua_State* L) {
+	// spell:secondaryGroupCooldownWOD(grade, time)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::SECONDARY_GROUP_COOLDOWN, grade));
+	} else {
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::SECONDARY_GROUP_COOLDOWN, grade, getNumber<int32_t>(L, 3));
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellIncreaseManaLeechWOD(lua_State* L) {
+	// spell:increaseManaLeechWOD(grade, value)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::MANA_LEECH, grade));
+	} else {
+		int32_t value = getNumber<int32_t>(L, 3);
+		if (value > 0) {
+			spell->setWheelOfDestinyBoost(WheelSpellBoost_t::MANA_LEECH_CHANCE, grade, 100);
+		} else {
+			spell->setWheelOfDestinyBoost(WheelSpellBoost_t::MANA_LEECH_CHANCE, grade, 0);
+		}
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::MANA_LEECH, grade, value);
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellIncreaselifeLeechWOD(lua_State* L) {
+	// spell:increaselifeLeechWOD(grade, value)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::LIFE_LEECH, grade));
+	} else {
+		int32_t value = getNumber<int32_t>(L, 3);
+		if (value > 0) {
+			spell->setWheelOfDestinyBoost(WheelSpellBoost_t::LIFE_LEECH_CHANCE, grade, 100);
+		} else {
+			spell->setWheelOfDestinyBoost(WheelSpellBoost_t::LIFE_LEECH_CHANCE, grade, 0);
+		}
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::LIFE_LEECH, grade, value);
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellIncreaseDamageWOD(lua_State* L) {
+	// spell:increaseDamageWOD(grade, value)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::DAMAGE, grade));
+	} else {
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::DAMAGE, grade, getNumber<int32_t>(L, 3));
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellIncreaseDamageReductionWOD(lua_State* L) {
+	// spell:increaseDamageReductionWOD(grade, value)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::DAMAGE_REDUCTION, grade));
+	} else {
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::DAMAGE_REDUCTION, grade, getNumber<int32_t>(L, 3));
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellIncreaseHealWOD(lua_State* L) {
+	// spell:increaseHealWOD(grade, value)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::HEAL, grade));
+	} else {
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::HEAL, grade, getNumber<int32_t>(L, 3));
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellIncreaseCriticalDamageWOD(lua_State* L) {
+	// spell:increaseCriticalDamageWOD(grade, value)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::CRITICAL_DAMAGE, grade));
+	} else {
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::CRITICAL_DAMAGE, grade, getNumber<int32_t>(L, 3));
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int SpellFunctions::luaSpellIncreaseCriticalChanceWOD(lua_State* L) {
+	// spell:increaseCriticalChanceWOD(grade, value)
+	const auto spell = getUserdataShared<Spell>(L, 1);
+	if (!spell) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_SPELL_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	WheelSpellGrade_t grade = getNumber<WheelSpellGrade_t>(L, 2);
+	if (lua_gettop(L) == 2) {
+		lua_pushnumber(L, spell->getWheelOfDestinyBoost(WheelSpellBoost_t::CRITICAL_CHANCE, grade));
+	} else {
+		spell->setWheelOfDestinyBoost(WheelSpellBoost_t::CRITICAL_CHANCE, grade, getNumber<int32_t>(L, 3));
+		spell->setWheelOfDestinyUpgraded(true);
+		pushBoolean(L, true);
 	}
 	return 1;
 }

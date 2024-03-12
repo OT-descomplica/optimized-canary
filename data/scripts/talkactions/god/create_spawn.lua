@@ -1,13 +1,12 @@
 local createMonster = TalkAction("/spawn")
 
 function createMonster.onSay(player, words, param)
-	if not player:getGroup():getAccess() or player:getAccountType() < ACCOUNT_TYPE_GOD then
-		return true
-	end
+	-- create log
+	logCommand(player, words, param)
 
 	if param == "" then
 		player:sendCancelMessage("Command param required.")
-		return false
+		return true
 	end
 
 	local spawn = Spawn()
@@ -17,15 +16,16 @@ function createMonster.onSay(player, words, param)
 			spawntime = tonumber(parameter[2]) or 60,
 			monster = parameter[1],
 			pos = player:getPosition(),
-			status = true
-		}
+			status = true,
+		},
 	}
 	spawn:setPositions(config)
 	spawn:executeSpawn()
 	player:getPosition():sendMagicEffect(CONST_ME_MAGIC_GREEN)
 	player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "You have spawned " .. parameter[1] .. ".")
-	return false
+	return true
 end
 
 createMonster:separator(" ")
+createMonster:groupType("god")
 createMonster:register()

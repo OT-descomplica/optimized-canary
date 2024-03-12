@@ -1,53 +1,36 @@
 /**
  * Canary - A free and open-source MMORPG server emulator
- * Copyright (C) 2021 OpenTibiaBR <opentibiabr@outlook.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#include "otpch.h"
+#include "pch.hpp"
 
-#include "lua/creature/actions.h"
+#include "lua/creature/actions.hpp"
 #include "lua/functions/events/action_functions.hpp"
-#include "game/game.h"
-#include "items/item.h"
-
+#include "game/game.hpp"
+#include "items/item.hpp"
 
 int ActionFunctions::luaCreateAction(lua_State* L) {
 	// Action()
-	Action* action = new Action(getScriptEnv()->getScriptInterface());
-	if (action) {
-		action->fromLua = true;
-		pushUserdata<Action>(L, action);
-		setMetatable(L, -1, "Action");
-	} else {
-		reportErrorFunc(getErrorDesc(LUA_ERROR_ACTION_NOT_FOUND));
-		pushBoolean(L, false);
-	}
+	auto action = std::make_shared<Action>(getScriptEnv()->getScriptInterface());
+	pushUserdata<Action>(L, action);
+	setMetatable(L, -1, "Action");
 	return 1;
 }
 
 int ActionFunctions::luaActionOnUse(lua_State* L) {
 	// action:onUse(callback)
-	Action* action = getUserdata<Action>(L, 1);
+	const auto action = getUserdataShared<Action>(L, 1);
 	if (action) {
 		if (!action->loadCallback()) {
 			pushBoolean(L, false);
 			return 1;
 		}
-		action->scripted = true;
+		action->setLoadedCallback(true);
 		pushBoolean(L, true);
 	} else {
 		reportErrorFunc(getErrorDesc(LUA_ERROR_ACTION_NOT_FOUND));
@@ -58,9 +41,9 @@ int ActionFunctions::luaActionOnUse(lua_State* L) {
 
 int ActionFunctions::luaActionRegister(lua_State* L) {
 	// action:register()
-	Action* action = getUserdata<Action>(L, 1);
+	const auto action = getUserdataShared<Action>(L, 1);
 	if (action) {
-		if (!action->isScripted()) {
+		if (!action->isLoadedCallback()) {
 			pushBoolean(L, false);
 			return 1;
 		}
@@ -75,7 +58,7 @@ int ActionFunctions::luaActionRegister(lua_State* L) {
 
 int ActionFunctions::luaActionItemId(lua_State* L) {
 	// action:id(ids)
-	Action* action = getUserdata<Action>(L, 1);
+	const auto action = getUserdataShared<Action>(L, 1);
 	if (action) {
 		int parameters = lua_gettop(L) - 1; // - 1 because self is a parameter aswell, which we want to skip ofc
 		if (parameters > 1) {
@@ -95,7 +78,7 @@ int ActionFunctions::luaActionItemId(lua_State* L) {
 
 int ActionFunctions::luaActionActionId(lua_State* L) {
 	// action:aid(aids)
-	Action* action = getUserdata<Action>(L, 1);
+	const auto action = getUserdataShared<Action>(L, 1);
 	if (action) {
 		int parameters = lua_gettop(L) - 1; // - 1 because self is a parameter aswell, which we want to skip ofc
 		if (parameters > 1) {
@@ -115,7 +98,7 @@ int ActionFunctions::luaActionActionId(lua_State* L) {
 
 int ActionFunctions::luaActionUniqueId(lua_State* L) {
 	// action:uid(uids)
-	Action* action = getUserdata<Action>(L, 1);
+	const auto action = getUserdataShared<Action>(L, 1);
 	if (action) {
 		int parameters = lua_gettop(L) - 1; // - 1 because self is a parameter aswell, which we want to skip ofc
 		if (parameters > 1) {
@@ -137,9 +120,9 @@ int ActionFunctions::luaActionPosition(lua_State* L) {
 	/** @brief Create action position
 	 * @param positions = position or table of positions to set a action script
 	 * @param itemId or @param itemName = if item id or string name is set, the item is created on position (if not exists), this variable is nil by default
-	* action:position(positions, itemId or name)
-	*/
-	Action* action = getUserdata<Action>(L, 1);
+	 * action:position(positions, itemId or name)
+	 */
+	const auto action = getUserdataShared<Action>(L, 1);
 	if (!action) {
 		reportErrorFunc(getErrorDesc(LUA_ERROR_ACTION_NOT_FOUND));
 		pushBoolean(L, false);
@@ -150,8 +133,7 @@ int ActionFunctions::luaActionPosition(lua_State* L) {
 	// The parameter "- 1" because self is a parameter aswell, which we want to skip L 1 (UserData)
 	// isNumber(L, 2) is for skip the itemId
 	if (int parameters = lua_gettop(L) - 1;
-	parameters > 1 && isNumber(L, 2))
-	{
+		parameters > 1 && isNumber(L, 2)) {
 		for (int i = 0; i < parameters; ++i) {
 			action->setPositionsVector(getPosition(L, 2 + i));
 		}
@@ -184,8 +166,8 @@ int ActionFunctions::luaActionPosition(lua_State* L) {
 
 		// If it is an item that can be removed, then it will be set as non-movable.
 		ItemType &itemType = Item::items.getItemType(itemId);
-		if (itemType.moveable == true) {
-			itemType.moveable = false;
+		if (itemType.movable == true) {
+			itemType.movable = false;
 		}
 
 		g_game().setCreateLuaItems(position, itemId);
@@ -197,7 +179,7 @@ int ActionFunctions::luaActionPosition(lua_State* L) {
 
 int ActionFunctions::luaActionAllowFarUse(lua_State* L) {
 	// action:allowFarUse(bool)
-	Action* action = getUserdata<Action>(L, 1);
+	const auto action = getUserdataShared<Action>(L, 1);
 	if (action) {
 		action->setAllowFarUse(getBoolean(L, 2));
 		pushBoolean(L, true);
@@ -210,7 +192,7 @@ int ActionFunctions::luaActionAllowFarUse(lua_State* L) {
 
 int ActionFunctions::luaActionBlockWalls(lua_State* L) {
 	// action:blockWalls(bool)
-	Action* action = getUserdata<Action>(L, 1);
+	const auto action = getUserdataShared<Action>(L, 1);
 	if (action) {
 		action->setCheckLineOfSight(getBoolean(L, 2));
 		pushBoolean(L, true);
@@ -223,7 +205,7 @@ int ActionFunctions::luaActionBlockWalls(lua_State* L) {
 
 int ActionFunctions::luaActionCheckFloor(lua_State* L) {
 	// action:checkFloor(bool)
-	Action* action = getUserdata<Action>(L, 1);
+	const auto action = getUserdataShared<Action>(L, 1);
 	if (action) {
 		action->setCheckFloor(getBoolean(L, 2));
 		pushBoolean(L, true);

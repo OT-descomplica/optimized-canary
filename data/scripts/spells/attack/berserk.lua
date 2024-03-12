@@ -7,7 +7,7 @@ combat:setArea(createCombatArea(AREA_SQUARE1X1))
 
 function onGetFormulaValues(player, skill, attack, factor)
 	local level = player:getLevel()
-	
+
 	local min = (level / 5) + (skill + attack) * 0.5
 	local max = (level / 5) + (skill + attack) * 1.5
 
@@ -26,6 +26,7 @@ spell:group("attack")
 spell:id(80)
 spell:name("Berserk")
 spell:words("exori")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_BERSERK)
 spell:level(35)
 spell:mana(115)
 spell:isPremium(true)

@@ -9,7 +9,6 @@ function onGetFormulaValues(player, level, maglevel)
 	return -min, -max
 end
 
-
 combat:setCallback(CALLBACK_PARAM_LEVELMAGICVALUE, "onGetFormulaValues")
 
 local spell = Spell("instant")
@@ -22,6 +21,8 @@ spell:group("attack")
 spell:id(112)
 spell:name("Ice Strike")
 spell:words("exori frigo")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_OR_RUNE)
+spell:impactSound(SOUND_EFFECT_TYPE_SPELL_ICE_STRIKE)
 spell:level(15)
 spell:mana(20)
 spell:isPremium(true)

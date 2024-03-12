@@ -9,6 +9,7 @@ function onGetFormulaValues(player, level, maglevel)
 	local max = (level / 5) + (maglevel * 2.8) + 17
 	return -min, -max
 end
+
 combat:setCallback(CALLBACK_PARAM_LEVELMAGICVALUE, "onGetFormulaValues")
 
 local rune = Spell("rune")
@@ -17,8 +18,11 @@ function rune.onCastSpell(creature, var, isHotkey)
 	return combat:execute(creature, var)
 end
 
+rune:id(16)
 rune:group("attack")
 rune:name("great fireball rune")
+rune:castSound(SOUND_EFFECT_TYPE_SPELL_OR_RUNE)
+rune:impactSound(SOUND_EFFECT_TYPE_SPELL_GREAT_FIREBALL_RUNE)
 rune:runeId(3191)
 rune:allowFarUse(true)
 rune:charges(4)

@@ -26,7 +26,7 @@ function spell.onCastSpell(creature, var)
 
 	local membersList = party:getMembers()
 	membersList[#membersList + 1] = party:getLeader()
-	if membersList == nil or type(membersList) ~= 'table' or #membersList <= 1 then
+	if membersList == nil or type(membersList) ~= "table" or #membersList <= 1 then
 		creature:sendCancelMessage("No party members in range.")
 		position:sendMagicEffect(CONST_ME_POFF)
 		return false
@@ -59,7 +59,7 @@ function spell.onCastSpell(creature, var)
 		return false
 	end
 
-	creature:addMana(-(mana - baseMana), FALSE)
+	creature:addMana(-(mana - baseMana), false)
 	creature:addManaSpent((mana - baseMana))
 
 	for _, targetPlayer in ipairs(affectedList) do
@@ -73,6 +73,7 @@ spell:name("Train Party")
 spell:words("utito mas sio")
 spell:group("support")
 spell:vocation("knight;true", "elite knight;true")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_TRAIN_PARTY)
 spell:id(126)
 spell:cooldown(2 * 1000)
 spell:groupCooldown(2 * 1000)

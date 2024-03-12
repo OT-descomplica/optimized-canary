@@ -1,13 +1,12 @@
 local createSummon = TalkAction("/s")
 
 function createSummon.onSay(player, words, param)
-	if not player:getGroup():getAccess() or player:getAccountType() < ACCOUNT_TYPE_GOD then
-		return true
-	end
+	-- create log
+	logCommand(player, words, param)
 
 	if param == "" then
 		player:sendCancelMessage("Command param required.")
-		return false
+		return true
 	end
 
 	local position = player:getPosition()
@@ -15,14 +14,17 @@ function createSummon.onSay(player, words, param)
 	if not summon then
 		player:sendCancelMessage(RETURNVALUE_NOTENOUGHROOM)
 		position:sendMagicEffect(CONST_ME_POFF)
-		return false
+		return true
 	end
 
 	if summon:getOutfit().lookType == 0 then
-		summon:setOutfit({lookType = player:getFamiliarLooktype()})
+		summon:setOutfit({ lookType = player:getFamiliarLooktype() })
 	end
-	return false
+	position:sendMagicEffect(CONST_ME_MAGIC_BLUE)
+	summon:getPosition():sendMagicEffect(CONST_ME_TELEPORT)
+	return true
 end
 
 createSummon:separator(" ")
+createSummon:groupType("god")
 createSummon:register()

@@ -1,26 +1,15 @@
 /**
  * Canary - A free and open-source MMORPG server emulator
- * Copyright (C) 2021 OpenTibiaBR <opentibiabr@outlook.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#ifndef SRC_LUA_LUA_DEFINITIONS_HPP_
-#define SRC_LUA_LUA_DEFINITIONS_HPP_
+#pragma once
 
-#include "game/movement/position.h"
+#include "game/movement/position.hpp"
 
 // Enums
 enum {
@@ -28,16 +17,44 @@ enum {
 	EVENT_ID_USER = 1000,
 };
 
-enum LuaDataType {
-	LuaData_Unknown,
+enum class LuaData_t : uint8_t {
+	Unknown,
 
-	LuaData_Item,
-	LuaData_Container,
-	LuaData_Teleport,
-	LuaData_Player,
-	LuaData_Monster,
-	LuaData_Npc,
-	LuaData_Tile,
+	Item,
+	Container,
+	Teleport,
+	Player,
+	Monster,
+	Npc,
+	MonsterType,
+	NpcType,
+	Tile,
+	Variant,
+	Position,
+	NetworkMessage,
+	ModalWindow,
+	Guild,
+	Group,
+	Vocation,
+	Town,
+	House,
+	ItemType,
+	Combat,
+	Condition,
+	Charm,
+	Loot,
+	MonsterSpell,
+	Spell,
+	Party,
+	Action,
+	TalkAction,
+	CreatureEvent,
+	MoveEvent,
+	GlobalEvent,
+	Weapon,
+	Imbuement,
+	Mount,
+	ItemClassification,
 };
 
 enum CreatureEventType_t {
@@ -89,7 +106,8 @@ enum GlobalEvent_t {
 	GLOBALEVENT_STARTUP,
 	GLOBALEVENT_SHUTDOWN,
 	GLOBALEVENT_RECORD,
-	GLOBALEVENT_PERIODCHANGE
+	GLOBALEVENT_PERIODCHANGE,
+	GLOBALEVENT_ON_THINK,
 };
 
 enum ModuleType_t {
@@ -97,20 +115,13 @@ enum ModuleType_t {
 	MODULE_TYPE_NONE,
 };
 
-enum LuaVariantType_t {
-	VARIANT_NONE,
-
-	VARIANT_NUMBER,
-	VARIANT_POSITION,
-	VARIANT_TARGETPOSITION,
-	VARIANT_STRING,
-};
-
 enum ErrorCode_t {
 	LUA_ERROR_PLAYER_NOT_FOUND,
 	LUA_ERROR_CREATURE_NOT_FOUND,
 	LUA_ERROR_NPC_NOT_FOUND,
 	LUA_ERROR_NPC_TYPE_NOT_FOUND,
+	LUA_ERROR_MONSTER_NOT_FOUND,
+	LUA_ERROR_MONSTER_TYPE_NOT_FOUND,
 	LUA_ERROR_ITEM_NOT_FOUND,
 	LUA_ERROR_THING_NOT_FOUND,
 	LUA_ERROR_TILE_NOT_FOUND,
@@ -122,7 +133,9 @@ enum ErrorCode_t {
 	LUA_ERROR_VARIANT_NOT_FOUND,
 	LUA_ERROR_VARIANT_UNKNOWN,
 	LUA_ERROR_SPELL_NOT_FOUND,
-	LUA_ERROR_ACTION_NOT_FOUND
+	LUA_ERROR_ACTION_NOT_FOUND,
+	LUA_ERROR_TALK_ACTION_NOT_FOUND,
+	LUA_ERROR_ZONE_NOT_FOUND,
 };
 
 enum TargetSearchType_t {
@@ -192,23 +205,3 @@ enum BugReportType_t : uint8_t {
 	BUG_CATEGORY_TECHNICAL = 2,
 	BUG_CATEGORY_OTHER = 3
 };
-
-// Struct
-struct LuaVariant {
-	LuaVariantType_t type = VARIANT_NONE;
-	std::string text;
-	Position pos;
-	uint32_t number = 0;
-};
-
-struct LuaTimerEventDesc {
-	int32_t scriptId = -1;
-	int32_t function = -1;
-	std::list<int32_t> parameters;
-	uint32_t eventId = 0;
-
-	LuaTimerEventDesc() = default;
-	LuaTimerEventDesc(LuaTimerEventDesc&& other) = default;
-};
-
-#endif  // SRC_LUA_LUA_DEFINITIONS_HPP_

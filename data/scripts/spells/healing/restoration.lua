@@ -9,6 +9,7 @@ function onGetFormulaValues(player, level, maglevel)
 	local max = (level * 1.4 / 5) + (maglevel * 10.79 * 1.4) + 79 * 1.4 -- TODO: Formulas (Right now using 40% extra on Ultimate Healing with closer min and max values to the avg)
 	return min, max
 end
+
 combat:setCallback(CALLBACK_PARAM_LEVELMAGICVALUE, "onGetFormulaValues")
 
 local spell = Spell("instant")
@@ -21,6 +22,7 @@ spell:group("healing")
 spell:id(241)
 spell:name("Restoration")
 spell:words("exura max vita")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_RESTORATION)
 spell:level(300)
 spell:mana(260)
 spell:isSelfTarget(true)

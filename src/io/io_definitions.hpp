@@ -1,24 +1,13 @@
 /**
  * Canary - A free and open-source MMORPG server emulator
- * Copyright (C) 2021 OpenTibiaBR <opentibiabr@outlook.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#ifndef SRC_IO_IO_DEFINITIONS_HPP_
-#define SRC_IO_IO_DEFINITIONS_HPP_
+#pragma once
 
 // Enums
 enum FILELOADER_ERRORS {
@@ -56,7 +45,8 @@ enum OTBM_AttrTypes_t {
 	OTBM_ATTR_SLEEPERGUID = 20,
 	OTBM_ATTR_SLEEPSTART = 21,
 	OTBM_ATTR_CHARGES = 22,
-	OTBM_ATTR_EXT_SPAWN_NPC_FILE = 23
+	OTBM_ATTR_EXT_SPAWN_NPC_FILE = 23,
+	OTBM_ATTR_EXT_ZONE_FILE = 24,
 };
 
 enum OTBM_NodeTypes_t {
@@ -76,6 +66,7 @@ enum OTBM_NodeTypes_t {
 	OTBM_HOUSETILE = 14,
 	OTBM_WAYPOINTS = 15,
 	OTBM_WAYPOINT = 16,
+	OTBM_TILE_ZONE = 19
 };
 
 enum OTBM_TileFlag_t : uint32_t {
@@ -95,9 +86,7 @@ struct MarketStatistics {
 	}
 
 	uint32_t numTransactions;
-	uint32_t highestPrice;
+	uint64_t highestPrice;
 	uint64_t totalPrice;
-	uint32_t lowestPrice;
+	uint64_t lowestPrice;
 };
-
-#endif  // SRC_IO_IO_DEFINITIONS_HPP_

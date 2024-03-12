@@ -14,7 +14,7 @@ local baseMana = 90
 local spell = Spell("instant")
 
 function spell.onCastSpell(creature, var)
-local position = creature:getPosition()
+	local position = creature:getPosition()
 
 	local party = creature:getParty()
 	if not party then
@@ -25,7 +25,7 @@ local position = creature:getPosition()
 
 	local membersList = party:getMembers()
 	membersList[#membersList + 1] = party:getLeader()
-	if membersList == nil or type(membersList) ~= 'table' or #membersList <= 1 then
+	if membersList == nil or type(membersList) ~= "table" or #membersList <= 1 then
 		creature:sendCancelMessage("No party members in range.")
 		position:sendMagicEffect(CONST_ME_POFF)
 		return false
@@ -72,6 +72,7 @@ spell:name("Protect Party")
 spell:words("utamo mas sio")
 spell:group("support")
 spell:vocation("paladin;true", "royal paladin;true")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_PROTECT_PARTY)
 spell:id(127)
 spell:cooldown(2 * 1000)
 spell:groupCooldown(2 * 1000)

@@ -1,36 +1,25 @@
 /**
- * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019  Mark Samman <mark.samman@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Canary - A free and open-source MMORPG server emulator
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#include "otpch.h"
+#include "pch.hpp"
 
-#include "database/database.h"
-#include "creatures/players/grouping/guild.h"
-#include "io/ioguild.h"
+#include "database/database.hpp"
+#include "creatures/players/grouping/guild.hpp"
+#include "io/ioguild.hpp"
 
-Guild* IOGuild::loadGuild(uint32_t guildId)
-{
-	Database& db = Database::getInstance();
+std::shared_ptr<Guild> IOGuild::loadGuild(uint32_t guildId) {
+	Database &db = Database::getInstance();
 	std::ostringstream query;
 	query << "SELECT `name`, `balance` FROM `guilds` WHERE `id` = " << guildId;
 	if (DBResult_ptr result = db.storeQuery(query.str())) {
-		Guild* guild = new Guild(guildId, result->getString("name"));
-    guild->setBankBalance(result->getNumber<uint64_t>("balance"));
+		const auto guild = std::make_shared<Guild>(guildId, result->getString("name"));
+		guild->setBankBalance(result->getNumber<uint64_t>("balance"));
 		query.str(std::string());
 		query << "SELECT `id`, `name`, `level` FROM `guild_ranks` WHERE `guild_id` = " << guildId;
 
@@ -44,20 +33,20 @@ Guild* IOGuild::loadGuild(uint32_t guildId)
 	return nullptr;
 }
 
-void IOGuild::saveGuild(Guild* guild) {
-  if (!guild)
-    return;
-  Database& db = Database::getInstance();
-  std::ostringstream updateQuery;
-  updateQuery << "UPDATE `guilds` SET ";
-  updateQuery << "`balance` = " << guild->getBankBalance();
-  updateQuery << " WHERE `id` = " << guild->getId();
-  db.executeQuery(updateQuery.str());
+void IOGuild::saveGuild(const std::shared_ptr<Guild> guild) {
+	if (!guild) {
+		return;
+	}
+	Database &db = Database::getInstance();
+	std::ostringstream updateQuery;
+	updateQuery << "UPDATE `guilds` SET ";
+	updateQuery << "`balance` = " << guild->getBankBalance();
+	updateQuery << " WHERE `id` = " << guild->getId();
+	db.executeQuery(updateQuery.str());
 }
 
-uint32_t IOGuild::getGuildIdByName(const std::string& name)
-{
-	Database& db = Database::getInstance();
+uint32_t IOGuild::getGuildIdByName(const std::string &name) {
+	Database &db = Database::getInstance();
 
 	std::ostringstream query;
 	query << "SELECT `id` FROM `guilds` WHERE `name` = " << db.escapeString(name);
@@ -69,10 +58,9 @@ uint32_t IOGuild::getGuildIdByName(const std::string& name)
 	return result->getNumber<uint32_t>("id");
 }
 
-void IOGuild::getWarList(uint32_t guildId, GuildWarVector& guildWarVector)
-{
+void IOGuild::getWarList(uint32_t guildId, GuildWarVector &guildWarVector) {
 	std::ostringstream query;
-	query << "SELECT `guild1`, `guild2` FROM `guild_wars` WHERE (`guild1` = " << guildId << " OR `guild2` = " << guildId << ") AND `ended` = 0 AND `status` = 1";
+	query << "SELECT `guild1`, `guild2` FROM `guild_wars` WHERE (`guild1` = " << guildId << " OR `guild2` = " << guildId << ") AND `status` = 1";
 
 	DBResult_ptr result = Database::getInstance().storeQuery(query.str());
 	if (!result) {

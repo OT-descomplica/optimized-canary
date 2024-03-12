@@ -1,5 +1,5 @@
 -- This array contains all destroyable field items
-local fields = {105, 2118, 2119, 2120, 2121, 2122, 2123, 2124, 2125, 2126, 2132, 2133, 2134, 2135, 21465}
+local fields = { 105, 2118, 2119, 2120, 2121, 2122, 2123, 2124, 2125, 2126, 2132, 2133, 2134, 2135, 21465 }
 
 local rune = Spell("rune")
 
@@ -18,8 +18,11 @@ function rune.onCastSpell(creature, variant, isHotkey)
 	return false
 end
 
+rune:id(30)
 rune:group("support")
 rune:name("destroy field rune")
+rune:castSound(SOUND_EFFECT_TYPE_SPELL_OR_RUNE)
+rune:impactSound(SOUND_EFFECT_TYPE_SPELL_DESTROY_FIELD_RUNE)
 rune:runeId(3148)
 rune:allowFarUse(true)
 rune:charges(3)

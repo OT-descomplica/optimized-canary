@@ -10,6 +10,7 @@ for index, value in ipairs(QuestDoorTable) do
 		table.insert(doorIds, value.openDoor)
 	end
 end
+
 for index, value in ipairs(LevelDoorTable) do
 	if not table.contains(doorIds, value.openDoor) then
 		table.insert(doorIds, value.openDoor)
@@ -29,10 +30,11 @@ function closingDoor.onStepIn(creature, item, position, fromPosition)
 			else
 				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "The door seems to be sealed against unwanted intruders.")
 				player:teleportTo(fromPosition, true)
-			return false
+				return false
 			end
 		end
 	end
+
 	for index, value in ipairs(LevelDoorTable) do
 		if value.openDoor == item.itemid then
 			if item.actionid > 0 and player:getLevel() >= item.actionid - 1000 then
@@ -40,7 +42,7 @@ function closingDoor.onStepIn(creature, item, position, fromPosition)
 			else
 				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "Only the worthy may pass.")
 				player:teleportTo(fromPosition, true)
-			return false
+				return false
 			end
 		end
 	end
@@ -66,6 +68,7 @@ for index, value in ipairs(QuestDoorTable) do
 		table.insert(doorIds, value.openDoor)
 	end
 end
+
 for index, value in ipairs(LevelDoorTable) do
 	if not table.contains(doorIds, value.openDoor) then
 		table.insert(doorIds, value.openDoor)
@@ -79,12 +82,14 @@ function closingDoor.onStepOut(creature, item, position, fromPosition)
 	end
 
 	local tile = Tile(position)
+
 	if tile:getCreatureCount() > 0 then
 		return true
 	end
 
-	local newPosition = {x = position.x + 1, y = position.y, z = position.z}
+	local newPosition = { x = position.x + 1, y = position.y, z = position.z }
 	local query = Tile(newPosition):queryAdd(creature)
+
 	if query ~= RETURNVALUE_NOERROR or query == RETURNVALUE_NOTENOUGHROOM then
 		newPosition.x = newPosition.x - 1
 		newPosition.y = newPosition.y + 1
@@ -96,6 +101,7 @@ function closingDoor.onStepOut(creature, item, position, fromPosition)
 	end
 
 	local i, tileItem, tileCount = 1, true, tile:getThingCount()
+
 	while tileItem and i < tileCount do
 		tileItem = tile:getThing(i)
 		if tileItem and tileItem:getUniqueId() ~= item.uid and tileItem:getType():isMovable() then
@@ -110,6 +116,7 @@ function closingDoor.onStepOut(creature, item, position, fromPosition)
 			item:transform(value.closedDoor)
 		end
 	end
+
 	for index, value in ipairs(QuestDoorTable) do
 		if value.openDoor == item.itemid then
 			item:transform(value.closedDoor)

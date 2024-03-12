@@ -1,12 +1,10 @@
 registerNpcType = {}
-setmetatable(registerNpcType,
-{
-	__call =
-	function(self, npcType, mask)
-		for _,parse in pairs(self) do
+setmetatable(registerNpcType, {
+	__call = function(self, npcType, mask)
+		for _, parse in pairs(self) do
 			parse(npcType, mask)
 		end
-	end
+	end,
 })
 
 NpcType.register = function(self, mask)
@@ -22,19 +20,6 @@ end
 registerNpcType.description = function(npcType, mask)
 	if mask.description then
 		npcType:nameDescription(mask.description)
-	end
-end
-
-registerNpcType.speechBubble = function(npcType, mask)
-	local speechBubble = npcType:speechBubble()
-	if mask.speechBubble then
-		npcType:speechBubble(mask.speechBubble)
-	elseif speechBubble == 3 then
-		npcType:speechBubble(4)
-	elseif speechBubble < 1 then
-		npcType:speechBubble(1)
-	else
-		npcType:speechBubble(2)
 	end
 end
 
@@ -115,6 +100,18 @@ registerNpcType.respawnType = function(npcType, mask)
 		end
 		if mask.respawnType.underground then
 			npcType:respawnTypeIsUnderground(mask.respawnType.underground)
+		end
+	end
+end
+
+registerNpcType.sounds = function(npcType, mask)
+	if type(mask.sounds) == "table" then
+		if mask.sounds.ticks and mask.sounds.chance and mask.sounds.ids and type(mask.sounds.ids) == "table" and #mask.sounds.ids > 0 then
+			npcType:soundSpeedTicks(mask.sounds.ticks)
+			npcType:soundChance(mask.sounds.chance)
+			for _, v in pairs(mask.sounds.ids) do
+				npcType:addSound(v)
+			end
 		end
 	end
 end
@@ -204,5 +201,11 @@ end
 registerNpcType.currency = function(npcType, mask)
 	if mask.currency then
 		npcType:currency(mask.currency)
+	end
+end
+
+registerNpcType.speechBubble = function(npcType, mask)
+	if mask.speechBubble then
+		npcType:speechBubble(mask.speechBubble)
 	end
 end

@@ -2,7 +2,7 @@
 local sayFunction = function(npcId, text, type, eventDelay, playerId)
 	local npc = Npc(npcId)
 	if not npc then
-		Spdlog.error("[local func = function(npcId, text, type, e, player)] - Npc not is valid")
+		logger.error("[sayFunction] - Npc not is valid")
 		return false
 	end
 
@@ -16,7 +16,7 @@ function MsgContains(message, keyword)
 		return true
 	end
 
-	return lowerMessage:find(lowerKeyword) and not lowerMessage:find('(%w+)' .. lowerKeyword)
+	return lowerMessage:find(lowerKeyword) and not lowerMessage:find("(%w+)" .. lowerKeyword)
 end
 
 function MsgFind(message, keyword)
@@ -25,9 +25,7 @@ function MsgFind(message, keyword)
 		return true
 	end
 
-	return string.find(lowerMessage, lowerKeyword)
-		and string.find(lowerMessage, lowerKeyword.. '(%w+)')
-		and string.find(lowerMessage, '(%w+)' .. lowerKeyword)
+	return string.find(lowerMessage, lowerKeyword) and string.find(lowerMessage, lowerKeyword .. "(%w+)") and string.find(lowerMessage, "(%w+)" .. lowerKeyword)
 end
 
 -- Npc talk
@@ -53,25 +51,24 @@ function Npc:sayWithDelay(npcId, text, messageType, delay, eventDelay, player)
 	eventDelay.event = addEvent(sayFunction, delay < 1 and 1000 or delay, npcId, text, messageType, eventDelay, player)
 end
 
-function SayEvent(npcId, playerId, messageDelayed, npcHandler)
-	local player = Player(playerId)
+function SayEvent(npcId, playerId, messageDelayed, npcHandler, textType)
 	local npc = Npc(npcId)
 	if not npc then
-		return Spdlog.error("[NpcHandler:say] - Npc parameter is missing, nil or not found")
+		return logger.error("[{} NpcHandler:say] - Npc parameter for npc '{}' is missing, nil or not found", npc:getName(), npc:getName())
 	end
 
+	local player = Player(playerId)
 	if not player then
-		return Spdlog.error("[NpcHandler:say] - Player parameter is missing, nil or not found")
+		return logger.error("[{} NpcHandler:say] - Player parameter for npc '{}' is missing, nil or not found", npc:getName(), npc:getName())
 	end
 
 	local parseInfo = {
 		[TAG_PLAYERNAME] = player:getName(),
 		[TAG_TIME] = getFormattedWorldTime(),
-		[TAG_BLESSCOST] = Blessings.getBlessingsCost(player:getLevel()),
-		[TAG_PVPBLESSCOST] = Blessings.getPvpBlessingCost(player:getLevel())
+		[TAG_BLESSCOST] = Blessings.getBlessingsCost(player:getLevel(), false),
+		[TAG_PVPBLESSCOST] = Blessings.getPvpBlessingCost(player:getLevel(), false),
 	}
-	npc:say(npcHandler:parseMessage(messageDelayed, parseInfo),
-			textType or TALKTYPE_PRIVATE_NP, false, player, npc:getPosition())
+	npc:say(npcHandler:parseMessage(messageDelayed, parseInfo), textType or TALKTYPE_PRIVATE_NP, false, player, npc:getPosition())
 end
 
 function GetCount(string)

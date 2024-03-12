@@ -1,33 +1,26 @@
 /**
  * Canary - A free and open-source MMORPG server emulator
- * Copyright (C) 2021 OpenTibiaBR <opentibiabr@outlook.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#include "otpch.h"
-#include "creatures/players/grouping/familiars.h"
-#include "utils/pugicast.h"
-#include "utils/tools.h"
+#include "pch.hpp"
+
+#include "creatures/players/grouping/familiars.hpp"
+#include "config/configmanager.hpp"
+#include "utils/pugicast.hpp"
+#include "utils/tools.hpp"
 
 bool Familiars::loadFromXml() {
 	pugi::xml_document doc;
-	pugi::xml_parse_result result = doc.load_file("data/XML/familiars.xml");
+	auto folder = g_configManager().getString(CORE_DIRECTORY, __FUNCTION__) + "/XML/familiars.xml";
+	pugi::xml_parse_result result = doc.load_file(folder.c_str());
 	if (!result) {
-		SPDLOG_ERROR("Failed to load Familiars");
-		printXMLError("[Familiars::loadFromXml] - ", "data/XML/familiars.xml", result);
+		g_logger().error("Failed to load Familiars");
+		printXMLError(__FUNCTION__, folder, result);
 		return false;
 	}
 
@@ -38,19 +31,19 @@ bool Familiars::loadFromXml() {
 		}
 
 		if (!(attr = familiarsNode.attribute("vocation"))) {
-			SPDLOG_WARN("[Familiars::loadFromXml] - Missing familiar vocation.");
+			g_logger().warn("[Familiars::loadFromXml] - Missing familiar vocation.");
 			continue;
 		}
 
 		uint16_t vocation = pugi::cast<uint16_t>(attr.value());
 		if (vocation > VOCATION_LAST) {
-			SPDLOG_WARN("[Familiars::loadFromXml] - Invalid familiar vocation {}", vocation);
+			g_logger().warn("[Familiars::loadFromXml] - Invalid familiar vocation {}", vocation);
 			continue;
 		}
 
 		pugi::xml_attribute lookTypeAttribute = familiarsNode.attribute("lookType");
 		if (!lookTypeAttribute) {
-			SPDLOG_WARN("[Familiars::loadFromXml] - Missing looktype on familiar.");
+			g_logger().warn("[Familiars::loadFromXml] - Missing looktype on familiar.");
 			continue;
 		}
 
@@ -59,7 +52,8 @@ bool Familiars::loadFromXml() {
 			pugi::cast<uint16_t>(lookTypeAttribute.value()),
 			familiarsNode.attribute("premium").as_bool(),
 			familiarsNode.attribute("unlocked").as_bool(true),
-			familiarsNode.attribute("type").as_string());
+			familiarsNode.attribute("type").as_string()
+		);
 	}
 	for (uint16_t vocation = VOCATION_NONE; vocation <= VOCATION_LAST; ++vocation) {
 		familiars[vocation].shrink_to_fit();
@@ -68,7 +62,7 @@ bool Familiars::loadFromXml() {
 }
 
 const Familiar* Familiars::getFamiliarByLookType(uint16_t vocation, uint16_t lookType) const {
-	for (const Familiar& familiar : familiars[vocation]) {
+	for (const Familiar &familiar : familiars[vocation]) {
 		if (familiar.lookType == lookType) {
 			return &familiar;
 		}

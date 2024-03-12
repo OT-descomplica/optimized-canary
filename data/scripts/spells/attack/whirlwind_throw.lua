@@ -6,7 +6,7 @@ combat:setParameter(COMBAT_PARAM_BLOCKARMOR, 1)
 combat:setParameter(COMBAT_PARAM_USECHARGES, 1)
 
 function onGetFormulaValues(player, skill, attack, factor)
-	local level = player:getLevel()	
+	local level = player:getLevel()
 	local min = (level / 5) + (skill + attack) / 3
 	local max = (level / 5) + skill + attack
 	return -min * 1.28, -max * 1.28 -- TODO : Use New Real Formula instead of an %
@@ -24,6 +24,8 @@ spell:group("attack")
 spell:id(107)
 spell:name("Whirlwind Throw")
 spell:words("exori hur")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_OR_RUNE)
+spell:impactSound(SOUND_EFFECT_TYPE_SPELL_WHIRLWIND_THROW)
 spell:level(28)
 spell:mana(40)
 spell:isPremium(true)

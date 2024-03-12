@@ -1,13 +1,12 @@
 local createNpc = TalkAction("/n")
 
 function createNpc.onSay(player, words, param)
-	if not player:getGroup():getAccess() or player:getAccountType() < ACCOUNT_TYPE_GOD then
-		return true
-	end
+	-- create log
+	logCommand(player, words, param)
 
 	if param == "" then
 		player:sendCancelMessage("Command param required.")
-		return false
+		return true
 	end
 
 	local position = player:getPosition()
@@ -19,8 +18,9 @@ function createNpc.onSay(player, words, param)
 		player:sendCancelMessage("There is not enough room.")
 		position:sendMagicEffect(CONST_ME_POFF)
 	end
-	return false
+	return true
 end
 
 createNpc:separator(" ")
+createNpc:groupType("god")
 createNpc:register()

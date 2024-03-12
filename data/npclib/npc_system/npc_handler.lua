@@ -26,7 +26,7 @@ if NpcHandler == nil then
 	MESSAGE_NEEDMORESPACE = 14 -- When the player has some space to buy an item, but not enough space
 	-- EMPTY = 15
 	MESSAGE_WALKAWAY = 16 -- When the player walks out of the talkRadius of the npc.
-	MESSAGE_DECLINE	 = 17 -- When the player says no to something.
+	MESSAGE_DECLINE = 17 -- When the player says no to something.
 	MESSAGE_SENDTRADE = 18 -- When the npc sends the trade window to the player
 	MESSAGE_NOSHOP = 19 -- When the npc's shop is requested but he doesn't have any
 	MESSAGE_ONCLOSESHOP = 20 -- When the player closes the npc's shop window
@@ -66,23 +66,21 @@ if NpcHandler == nil then
 	NpcHandler = {
 		keywordHandler = nil,
 		talkStart = nil,
-		talkDelayTimeForOutgoingMessages = 1, -- Seconds to delay outgoing messages.
-		talkDelay = nil,
+		talkDelay = 300, -- Delay from each messages
+		talkDelayTimeForOutgoingMessages = 1, -- Seconds to delay outgoing messages
 		callbackFunctions = nil,
 		modules = nil,
+		npcName = nil,
 		eventSay = nil,
 		eventDelayedSay = nil,
 		topic = nil,
+		talkRange = 4,
 		messages = {
 			-- These are the default replies of all npcs. They can/should be changed individually for each npc.
 			-- Leave empty for no send message
 			[MESSAGE_GREET] = "Greetings, |PLAYERNAME|.",
 			[MESSAGE_FAREWELL] = "Good bye, |PLAYERNAME|.",
 			[MESSAGE_BUY] = "Do you want to buy |ITEMCOUNT| |ITEMNAME| for |TOTALCOST| gold coins?",
-			--[EMPTY] = "EMPTY",
-			--[EMPTY] = "EMPTY",
-			--[EMPTY] = "EMPTY",
-			--[EMPTY] = "EMPTY",
 			[MESSAGE_MISSINGMONEY] = "You don't have enough money.",
 			[MESSAGE_NEEDMONEY] = "You don't have enough money.",
 			[MESSAGE_MISSINGITEM] = "You don't have so many.",
@@ -96,8 +94,8 @@ if NpcHandler == nil then
 			[MESSAGE_ONCLOSESHOP] = "Thank you, come back whenever you're in need of something else.",
 			[MESSAGE_ALREADYFOCUSED] = "|PLAYERNAME|, I am already talking to you.",
 			[MESSAGE_WALKAWAY_MALE] = "",
-			[MESSAGE_WALKAWAY_FEMALE] = ""
-		}
+			[MESSAGE_WALKAWAY_FEMALE] = "",
+		},
 	}
 
 	-- Creates a new NpcHandler with an empty callbackFunction stack.
@@ -105,11 +103,11 @@ if NpcHandler == nil then
 		local obj = {}
 		obj.callbackFunctions = {}
 		obj.modules = {}
+		obj.npcName = ""
 		obj.eventSay = {}
 		obj.eventDelayedSay = {}
 		obj.topic = {}
 		obj.talkStart = {}
-		obj.talkDelay = {}
 		obj.keywordHandler = keywordHandler
 		obj.messages = {}
 
@@ -119,6 +117,14 @@ if NpcHandler == nil then
 		setmetatable(obj, self)
 		self.__index = self
 		return obj
+	end
+
+	function NpcHandler:getTalkRange()
+		return self.talkRange
+	end
+
+	function NpcHandler:setTalkRange(newRange)
+		self.talkRange = newRange
 	end
 
 	-- NpcHandler get and set obj
@@ -215,7 +221,7 @@ if NpcHandler == nil then
 	function NpcHandler:removeInteraction(npc, player)
 		local playerId = player:getId()
 		if Player(player) == nil then
-			return Spdlog.error("[NpcHandler:removeInteraction] - Player is missing or nil")
+			return logger.error("[{} NpcHandler:removeInteraction] - Player parameter for npc '{}' is missing or nil", npc:getName(), npc:getName())
 		end
 
 		if self:getEventDelayedSay(playerId) then
@@ -256,10 +262,24 @@ if NpcHandler == nil then
 	end
 
 	-- Adds a module to this npc handler and inits it
-	function NpcHandler:addModule(module)
+	-- Variables "greetCallback, farewellCallback and tradeCallback" are boolean value, true by default
+	function NpcHandler:addModule(module, initNpcName, greetCallback, farewellCallback, tradeCallback)
 		if self.modules ~= nil then
 			self.modules[#self.modules + 1] = module
-			module:init(self)
+			self.npcName = initNpcName
+			if greetCallback == nil then
+				logger.warn("[NpcHandler:addModule] - Greet callback is missing for npc with name: {}, setting to true", initNpcName)
+				greetCallback = true
+			end
+			if farewellCallback == nil then
+				logger.warn("[NpcHandler:addModule] - Farewell callback is missing for npc with name: {}, setting to true", initNpcName)
+				farewellCallback = true
+			end
+			if tradeCallback == nil then
+				logger.warn("[NpcHandler:addModule] - Trade callback is missing for npc with name: {}, setting to true", initNpcName)
+				tradeCallback = true
+			end
+			module:init(self, greetCallback, farewellCallback, tradeCallback)
 		end
 	end
 
@@ -315,23 +335,39 @@ if NpcHandler == nil then
 	end
 
 	-- Changes the default response message with the specified id to newMessage
-	function NpcHandler:setMessage(id, newMessage)
+	function NpcHandler:setMessage(id, newMessage, delay)
 		if self.messages ~= nil then
 			self.messages[id] = newMessage
+			if delay ~= nil and delay > 1 then
+				self.talkDelay = delay
+			end
 		end
 	end
 
 	-- Translates all message tags found in msg using parseInfo
-	function NpcHandler:parseMessage(msg, parseInfo)
+	function NpcHandler:parseMessage(msg, parseInfo, player, message)
 		local ret = msg
-		if type(ret) == 'string' then
+		if type(ret) == "string" then
 			for search, replace in pairs(parseInfo) do
-				ret = string.gsub(ret, search, replace)
+				if type(replace) == "string" then
+					ret = string.gsub(ret, search, replace)
+				elseif type(replace) == "function" then
+					ret = string.gsub(ret, search, replace(player, message))
+				else
+					ret = string.gsub(ret, search, replace)
+				end
 			end
 		else
 			for i = 1, #ret do
 				for search, replace in pairs(parseInfo) do
 					ret[i] = string.gsub(ret[i], search, replace)
+					if type(replace) == "string" then
+						ret[i] = string.gsub(ret[i], search, replace)
+					elseif type(replace) == "function" then
+						ret = string.gsub(ret, search, replace(player, message))
+					else
+						ret[i] = string.gsub(ret[i], search, replace)
+					end
 				end
 			end
 		end
@@ -352,7 +388,7 @@ if NpcHandler == nil then
 				local parseInfo = { [TAG_PLAYERNAME] = playerName }
 				self:resetNpc(player)
 				msg = self:parseMessage(msg, parseInfo)
-				self:say(msg, npc, player, true)
+				self:say(msg, npc, player)
 				self:removeInteraction(npc, player)
 			end
 		end
@@ -371,7 +407,7 @@ if NpcHandler == nil then
 				local playerName = player:getName() or -1
 				local parseInfo = { [TAG_PLAYERNAME] = playerName }
 				msg = self:parseMessage(msg, parseInfo)
-				self:say(msg, npc, player, true)
+				self:say(msg, npc, player)
 			end
 		end
 		self:setInteraction(npc, player)
@@ -392,7 +428,7 @@ if NpcHandler == nil then
 		local callback = self:getCallback(CALLBACK_ON_DISAPPEAR)
 		if callback == nil or callback(npc, player) then
 			if self:processModuleCallback(CALLBACK_ON_DISAPPEAR, npc, player) then
-				self:unGreet(npc, player)
+				self:onWalkAway(npc, player)
 			end
 		end
 	end
@@ -408,9 +444,7 @@ if NpcHandler == nil then
 				end
 
 				if self.keywordHandler ~= nil then
-					if self:checkInteraction(npc, player)
-					and msgtype == TALKTYPE_PRIVATE_PN
-					or not self:checkInteraction(npc, player) then
+					if self:checkInteraction(npc, player) and msgtype == TALKTYPE_PRIVATE_PN or not self:checkInteraction(npc, player) then
 						local ret = self.keywordHandler:processMessage(npc, player, msg)
 						if not ret then
 							callback = self:getCallback(CALLBACK_MESSAGE_DEFAULT)
@@ -446,6 +480,7 @@ if NpcHandler == nil then
 
 				-- If is npc shop, send shop window and parse default message (if not have callback on the npc)
 				if npc:isMerchant() then
+					npc:closeShopWindow(player)
 					npc:openShopWindow(player)
 					self:say(msg, npc, player)
 				end
@@ -490,7 +525,7 @@ if NpcHandler == nil then
 
 	-- Tries to greet the player with the given player.
 	function NpcHandler:onGreet(npc, player, message)
-		if npc:isInTalkRange(Player(player):getPosition()) then
+		if npc:isInTalkRange(Player(player):getPosition(), self:getTalkRange()) then
 			if not self:checkInteraction(npc, player) then
 				self:greet(npc, player, message)
 				return true
@@ -528,12 +563,12 @@ if NpcHandler == nil then
 				local message_female = self:parseMessage(msg_female, parseInfo)
 				if message_female ~= message_male then
 					if playerSex == PLAYERSEX_FEMALE then
-						self:say(message_female, npc, player, true, TALKTYPE_SAY)
+						npc:sayWithDelay(npc:getId(), message_female, TALKTYPE_SAY, self.talkDelay, self.eventDelayedSay)
 					else
-						self:say(message_male, npc, player, true, TALKTYPE_SAY)
+						npc:sayWithDelay(npc:getId(), message_male, TALKTYPE_SAY, self.talkDelay, self.eventDelayedSay)
 					end
 				elseif message ~= "" then
-					self:say(message, npc, player, true, TALKTYPE_SAY)
+					npc:sayWithDelay(npc:getId(), message, TALKTYPE_SAY, self.talkDelay, self.eventDelayedSay)
 				end
 				self:resetNpc(player)
 				self:removeInteraction(npc, player)
@@ -569,12 +604,12 @@ if NpcHandler == nil then
 
 		local playerUniqueId = player.uid
 		if not playerUniqueId then
-			return Spdlog.error("[NpcHandler:doNPCTalkALot] - playerUniqueId is wrong or unsafe.")
+			return logger.error("[NpcHandler:doNPCTalkALot] - playerUniqueId is wrong or unsafe.")
 		end
 
 		local npcUniqueId = npc.uid
 		if not npcUniqueId then
-			return Spdlog.error("[NpcHandler:doNPCTalkALot] - npcUniqueId is wrong or unsafe.")
+			return logger.error("[NpcHandler:doNPCTalkALot] - npcUniqueId is wrong or unsafe.")
 		end
 
 		self.eventDelayedSay[playerId] = {}
@@ -585,16 +620,19 @@ if NpcHandler == nil then
 				self.talkDelay = delay
 			end
 			-- The "self.talkDelayTimeForOutgoingMessages * 1000" = Interval for sending subsequent messages from the first
-			npc:sayWithDelay(npcUniqueId, msgs[messagesTable], TALKTYPE_PRIVATE_NP, ((messagesTable-1) * self.talkDelay + self.talkDelayTimeForOutgoingMessages * 1000),
-                             self.eventDelayedSay[playerId][messagesTable], playerUniqueId)
+			npc:sayWithDelay(npcUniqueId, msgs[messagesTable], TALKTYPE_PRIVATE_NP, ((messagesTable - 1) * self.talkDelay + self.talkDelayTimeForOutgoingMessages * 1000), self.eventDelayedSay[playerId][messagesTable], playerUniqueId)
 			ret[#ret + 1] = self.eventDelayedSay[playerId][messagesTable]
 		end
-		return(ret)
+		return ret
 	end
 
 	-- Makes the npc represented by this instance of NpcHandler say something.
-	--	This implements the currently set type of talkdelay.
+	-- This implements the currently set type of talkdelay.
+	-- The "delay" variable sets the delay for the interval between messages
 	function NpcHandler:say(message, npc, player, delay, textType)
+		if not player then
+			return
+		end
 		local playerId = player:getId()
 		if type(message) == "table" then
 			return self:doNPCTalkALot(message, delay, npc, player)
@@ -604,16 +642,15 @@ if NpcHandler == nil then
 			self:cancelNPCTalk(self:getEventDelayedSay(playerId))
 		end
 
-		-- The "self.talkDelayTimeForOutgoingMessages * 1000" = Interval for sending subsequent messages from the first
 		stopEvent(self.eventSay[playerId])
-		self.eventSay[playerId] = addEvent(SayEvent, self.talkDelayTimeForOutgoingMessages * 1000, npc:getId(), player:getId(), message, self)
+		self.eventSay[playerId] = addEvent(SayEvent, self.talkDelayTimeForOutgoingMessages * 1000, npc:getId(), player:getId(), message, self, textType)
 	end
 
 	-- sendMessages(msg, messagesTable, npc, player, useDelay(true or false), delay)
 	-- If not have useDelay = true and delay, then send npc:talk(), this function not have delay of one message to other
 	function NpcHandler:sendMessages(message, messageTable, npc, player, useDelay, delay)
 		for index, value in pairs(messageTable) do
-			if MsgContains(message, index) then
+			if MsgFind(message, index) then
 				if useDelay and useDelay == true then
 					self:say(value, npc, player, delay or 1000)
 				else

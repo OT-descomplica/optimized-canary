@@ -1,36 +1,27 @@
 /**
  * Canary - A free and open-source MMORPG server emulator
- * Copyright (C) 2021 OpenTibiaBR <opentibiabr@outlook.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#include "otpch.h"
+#include "pch.hpp"
 
-#include "creatures/combat/spells.h"
-#include "creatures/monsters/monsters.h"
-#include "game/game.h"
+#include "game/game.hpp"
+#include "io/io_bosstiary.hpp"
+#include "creatures/combat/spells.hpp"
+#include "creatures/monsters/monsters.hpp"
+#include "creatures/monsters/monster.hpp"
 #include "lua/functions/creatures/monster/monster_type_functions.hpp"
-#include "lua/scripts/scripts.h"
+#include "lua/scripts/scripts.hpp"
 
-
-void MonsterTypeFunctions::createMonsterTypeLootLuaTable(lua_State* L, const std::vector<LootBlock>& lootList) {
+void MonsterTypeFunctions::createMonsterTypeLootLuaTable(lua_State* L, const std::vector<LootBlock> &lootList) {
 	lua_createtable(L, lootList.size(), 0);
 
 	int index = 0;
-	for (const auto& lootBlock : lootList) {
+	for (const auto &lootBlock : lootList) {
 		lua_createtable(L, 0, 8);
 
 		setField(L, "itemId", lootBlock.id);
@@ -52,7 +43,7 @@ void MonsterTypeFunctions::createMonsterTypeLootLuaTable(lua_State* L, const std
 
 int MonsterTypeFunctions::luaMonsterTypeCreate(lua_State* L) {
 	// MonsterType(name or raceid)
-	MonsterType* monsterType = nullptr;
+	std::shared_ptr<MonsterType> monsterType = nullptr;
 	if (isNumber(L, 2)) {
 		monsterType = g_monsters().getMonsterTypeByRaceId(getNumber<uint16_t>(L, 2));
 	} else {
@@ -70,7 +61,7 @@ int MonsterTypeFunctions::luaMonsterTypeCreate(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeIsAttackable(lua_State* L) {
 	// get: monsterType:isAttackable() set: monsterType:isAttackable(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.isAttackable);
@@ -86,7 +77,7 @@ int MonsterTypeFunctions::luaMonsterTypeIsAttackable(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeIsConvinceable(lua_State* L) {
 	// get: monsterType:isConvinceable() set: monsterType:isConvinceable(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.isConvinceable);
@@ -102,7 +93,7 @@ int MonsterTypeFunctions::luaMonsterTypeIsConvinceable(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeIsSummonable(lua_State* L) {
 	// get: monsterType:isSummonable() set: monsterType:isSummonable(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.isSummonable);
@@ -118,7 +109,7 @@ int MonsterTypeFunctions::luaMonsterTypeIsSummonable(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeIsIllusionable(lua_State* L) {
 	// get: monsterType:isIllusionable() set: monsterType:isIllusionable(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.isIllusionable);
@@ -134,7 +125,7 @@ int MonsterTypeFunctions::luaMonsterTypeIsIllusionable(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeIsHostile(lua_State* L) {
 	// get: monsterType:isHostile() set: monsterType:isHostile(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.isHostile);
@@ -150,7 +141,7 @@ int MonsterTypeFunctions::luaMonsterTypeIsHostile(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeFamiliar(lua_State* L) {
 	// get: monsterType:familiar() set: monsterType:familiar(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.isFamiliar);
@@ -166,7 +157,7 @@ int MonsterTypeFunctions::luaMonsterTypeFamiliar(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeIsRewardBoss(lua_State* L) {
 	// get: monsterType:isRewardBoss() set: monsterType:isRewardBoss(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.isRewardBoss);
@@ -182,7 +173,7 @@ int MonsterTypeFunctions::luaMonsterTypeIsRewardBoss(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeIsPushable(lua_State* L) {
 	// get: monsterType:isPushable() set: monsterType:isPushable(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.pushable);
@@ -198,7 +189,7 @@ int MonsterTypeFunctions::luaMonsterTypeIsPushable(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeIsHealthHidden(lua_State* L) {
 	// get: monsterType:isHealthHidden() set: monsterType:isHealthHidden(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.hiddenHealth);
@@ -214,7 +205,7 @@ int MonsterTypeFunctions::luaMonsterTypeIsHealthHidden(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeIsBlockable(lua_State* L) {
 	// get: monsterType:isBlockable() set: monsterType:isBlockable(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.isBlockable);
@@ -228,14 +219,31 @@ int MonsterTypeFunctions::luaMonsterTypeIsBlockable(lua_State* L) {
 	return 1;
 }
 
+int MonsterTypeFunctions::luaMonsterTypeIsForgeCreature(lua_State* L) {
+	// get: monsterType:isForgeCreature() set: monsterType:isForgeCreature(bool)
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		pushBoolean(L, false);
+		reportErrorFunc(getErrorDesc(LUA_ERROR_MONSTER_TYPE_NOT_FOUND));
+		return 0;
+	}
+
+	if (lua_gettop(L) == 1) {
+		pushBoolean(L, monsterType->info.isForgeCreature);
+	} else {
+		monsterType->info.isForgeCreature = getBoolean(L, 2);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
 int MonsterTypeFunctions::luaMonsterTypeCanSpawn(lua_State* L) {
 	// monsterType:canSpawn(pos)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
-	const Position& position = getPosition(L, 2);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	const Position &position = getPosition(L, 2);
 	if (monsterType) {
 		pushBoolean(L, monsterType->canSpawn(position));
-	}
-	else {
+	} else {
 		lua_pushnil(L);
 	}
 	return 1;
@@ -243,7 +251,7 @@ int MonsterTypeFunctions::luaMonsterTypeCanSpawn(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeCanPushItems(lua_State* L) {
 	// get: monsterType:canPushItems() set: monsterType:canPushItems(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.canPushItems);
@@ -259,7 +267,7 @@ int MonsterTypeFunctions::luaMonsterTypeCanPushItems(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeCanPushCreatures(lua_State* L) {
 	// get: monsterType:canPushCreatures() set: monsterType:canPushCreatures(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.canPushCreatures);
@@ -273,9 +281,23 @@ int MonsterTypeFunctions::luaMonsterTypeCanPushCreatures(lua_State* L) {
 	return 1;
 }
 
+int MonsterTypeFunctions::luaMonsterTypeCritChance(lua_State* L) {
+	// get: monsterType:critChance() set: monsterType:critChance(int)
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (monsterType) {
+		if (lua_gettop(L) == 2) {
+			monsterType->info.critChance = getNumber<uint16_t>(L, 2);
+		}
+		lua_pushnumber(L, monsterType->info.critChance);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
 int32_t MonsterTypeFunctions::luaMonsterTypeName(lua_State* L) {
 	// get: monsterType:name() set: monsterType:name(name)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushString(L, monsterType->name);
@@ -291,7 +313,7 @@ int32_t MonsterTypeFunctions::luaMonsterTypeName(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeNameDescription(lua_State* L) {
 	// get: monsterType:nameDescription() set: monsterType:nameDescription(desc)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushString(L, monsterType->nameDescription);
@@ -307,7 +329,7 @@ int MonsterTypeFunctions::luaMonsterTypeNameDescription(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypegetCorpseId(lua_State* L) {
 	// monsterType:getCorpseId()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		lua_pushnumber(L, monsterType->info.lookcorpse);
 	} else {
@@ -318,7 +340,7 @@ int MonsterTypeFunctions::luaMonsterTypegetCorpseId(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeHealth(lua_State* L) {
 	// get: monsterType:health() set: monsterType:health(health)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.health);
@@ -334,7 +356,7 @@ int MonsterTypeFunctions::luaMonsterTypeHealth(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeMaxHealth(lua_State* L) {
 	// get: monsterType:maxHealth() set: monsterType:maxHealth(health)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.healthMax);
@@ -350,7 +372,7 @@ int MonsterTypeFunctions::luaMonsterTypeMaxHealth(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeRunHealth(lua_State* L) {
 	// get: monsterType:runHealth() set: monsterType:runHealth(health)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.runAwayHealth);
@@ -366,7 +388,7 @@ int MonsterTypeFunctions::luaMonsterTypeRunHealth(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeExperience(lua_State* L) {
 	// get: monsterType:experience() set: monsterType:experience(exp)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.experience);
@@ -380,84 +402,72 @@ int MonsterTypeFunctions::luaMonsterTypeExperience(lua_State* L) {
 	return 1;
 }
 
-int MonsterTypeFunctions::luaMonsterTypeFaction(lua_State* L)
-{
+int MonsterTypeFunctions::luaMonsterTypeFaction(lua_State* L) {
 	// get: monsterType:faction() set: monsterType:faction(faction)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.faction);
-		}
-		else {
+		} else {
 			monsterType->info.faction = getNumber<Faction_t>(L, 2);
 			pushBoolean(L, true);
 		}
-	}
-	else {
+	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-int MonsterTypeFunctions::luaMonsterTypeEnemyFactions(lua_State* L)
-{
+int MonsterTypeFunctions::luaMonsterTypeEnemyFactions(lua_State* L) {
 	// get: monsterType:enemyFactions() set: monsterType:enemyFactions(enemyFaction)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_createtable(L, monsterType->info.enemyFactions.size(), 0);
 			int index = 0;
 
-			for (auto faction : monsterType->info.enemyFactions) {
+			for (const auto &faction : monsterType->info.enemyFactions) {
 				lua_pushnumber(L, faction);
 				lua_rawseti(L, -2, ++index);
 			}
-		}
-		else {
+		} else {
 			Faction_t faction = getNumber<Faction_t>(L, 2);
-			monsterType->info.enemyFactions.emplace(faction);
+			monsterType->info.enemyFactions.insert(faction);
 			pushBoolean(L, true);
 		}
-	}
-	else {
+	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-int MonsterTypeFunctions::luaMonsterTypeTargetPreferPlayer(lua_State* L)
-{
+int MonsterTypeFunctions::luaMonsterTypeTargetPreferPlayer(lua_State* L) {
 	// get: monsterType:targetPreferPlayer() set: monsterType:targetPreferPlayer(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushboolean(L, monsterType->info.targetPreferPlayer);
-		}
-		else {
+		} else {
 			monsterType->info.targetPreferPlayer = getBoolean(L, 2);
 			pushBoolean(L, true);
 		}
-	}
-	else {
+	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-int MonsterTypeFunctions::luaMonsterTypeTargetPreferMaster(lua_State* L)
-{
+int MonsterTypeFunctions::luaMonsterTypeTargetPreferMaster(lua_State* L) {
 	// get: monsterType:targetPreferMaster() set: monsterType:targetPreferMaster(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.faction);
-		}
-		else {
+		} else {
 			monsterType->info.targetPreferMaster = getBoolean(L, 2);
 			pushBoolean(L, true);
 		}
-	}
-	else {
+	} else {
 		lua_pushnil(L);
 	}
 	return 1;
@@ -465,7 +475,7 @@ int MonsterTypeFunctions::luaMonsterTypeTargetPreferMaster(lua_State* L)
 
 int MonsterTypeFunctions::luaMonsterTypeRaceid(lua_State* L) {
 	// get: monsterType:raceId() set: monsterType:raceId(id)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.raceid);
@@ -482,7 +492,7 @@ int MonsterTypeFunctions::luaMonsterTypeRaceid(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeBestiarytoKill(lua_State* L) {
 	// get: monsterType:BestiarytoKill() set: monsterType:BestiarytoKill(value)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.bestiaryToUnlock);
@@ -498,7 +508,7 @@ int MonsterTypeFunctions::luaMonsterTypeBestiarytoKill(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeBestiaryFirstUnlock(lua_State* L) {
 	// get: monsterType:BestiaryFirstUnlock() set: monsterType:BestiaryFirstUnlock(value)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.bestiaryFirstUnlock);
@@ -514,7 +524,7 @@ int MonsterTypeFunctions::luaMonsterTypeBestiaryFirstUnlock(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeBestiarySecondUnlock(lua_State* L) {
 	// get: monsterType:BestiarySecondUnlock() set: monsterType:BestiarySecondUnlock(value)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.bestiarySecondUnlock);
@@ -530,7 +540,7 @@ int MonsterTypeFunctions::luaMonsterTypeBestiarySecondUnlock(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeBestiaryCharmsPoints(lua_State* L) {
 	// get: monsterType:BestiaryCharmsPoints() set: monsterType:BestiaryCharmsPoints(value)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.bestiaryCharmsPoints);
@@ -546,7 +556,7 @@ int MonsterTypeFunctions::luaMonsterTypeBestiaryCharmsPoints(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeBestiaryStars(lua_State* L) {
 	// get: monsterType:BestiaryStars() set: monsterType:BestiaryStars(value)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.bestiaryStars);
@@ -562,7 +572,7 @@ int MonsterTypeFunctions::luaMonsterTypeBestiaryStars(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeBestiaryOccurrence(lua_State* L) {
 	// get: monsterType:BestiaryOccurrence() set: monsterType:BestiaryOccurrence(value)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.bestiaryOccurrence);
@@ -578,7 +588,7 @@ int MonsterTypeFunctions::luaMonsterTypeBestiaryOccurrence(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeBestiaryLocations(lua_State* L) {
 	// get: monsterType:BestiaryLocations() set: monsterType:BestiaryLocations(string)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushString(L, monsterType->info.bestiaryLocations);
@@ -594,7 +604,7 @@ int MonsterTypeFunctions::luaMonsterTypeBestiaryLocations(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeBestiaryclass(lua_State* L) {
 	// get: monsterType:Bestiaryclass() set: monsterType:Bestiaryclass(string)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushString(L, monsterType->info.bestiaryClass);
@@ -610,7 +620,7 @@ int MonsterTypeFunctions::luaMonsterTypeBestiaryclass(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeBestiaryrace(lua_State* L) {
 	// get: monsterType:Bestiaryrace() set: monsterType:Bestiaryrace(raceid)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.bestiaryRace);
@@ -627,118 +637,121 @@ int MonsterTypeFunctions::luaMonsterTypeBestiaryrace(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeCombatImmunities(lua_State* L) {
 	// get: monsterType:combatImmunities() set: monsterType:combatImmunities(immunity)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
-	if (monsterType) {
-		if (lua_gettop(L) == 1) {
-			lua_pushnumber(L, monsterType->info.damageImmunities);
-		} else {
-			std::string immunity = getString(L, 2);
-			if (immunity == "physical") {
-				monsterType->info.damageImmunities |= COMBAT_PHYSICALDAMAGE;
-				pushBoolean(L, true);
-			} else if (immunity == "energy") {
-				monsterType->info.damageImmunities |= COMBAT_ENERGYDAMAGE;
-				pushBoolean(L, true);
-			} else if (immunity == "fire") {
-				monsterType->info.damageImmunities |= COMBAT_FIREDAMAGE;
-				pushBoolean(L, true);
-			} else if (immunity == "poison" || immunity == "earth") {
-				monsterType->info.damageImmunities |= COMBAT_EARTHDAMAGE;
-				pushBoolean(L, true);
-			} else if (immunity == "drown") {
-				monsterType->info.damageImmunities |= COMBAT_DROWNDAMAGE;
-				pushBoolean(L, true);
-			} else if (immunity == "ice") {
-				monsterType->info.damageImmunities |= COMBAT_ICEDAMAGE;
-				pushBoolean(L, true);
-			} else if (immunity == "holy") {
-				monsterType->info.damageImmunities |= COMBAT_HOLYDAMAGE;
-				pushBoolean(L, true);
-			} else if (immunity == "death") {
-				monsterType->info.damageImmunities |= COMBAT_DEATHDAMAGE;
-				pushBoolean(L, true);
-			} else if (immunity == "lifedrain") {
-				monsterType->info.damageImmunities |= COMBAT_LIFEDRAIN;
-				pushBoolean(L, true);
-			} else if (immunity == "manadrain") {
-				monsterType->info.damageImmunities |= COMBAT_MANADRAIN;
-				pushBoolean(L, true);
-			} else {
-				SPDLOG_WARN("[MonsterTypeFunctions::luaMonsterTypeCombatImmunities] - "
-							"Unknown immunity name {} for monster: {}",
-							immunity, monsterType->name);
-				lua_pushnil(L);
-			}
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		pushBoolean(L, false);
+		reportErrorFunc(getErrorDesc(LUA_ERROR_MONSTER_TYPE_NOT_FOUND));
+		return 1;
+	}
+
+	if (lua_gettop(L) == 1) {
+		lua_createtable(L, COMBAT_COUNT, 0);
+		for (int i = 0; i < COMBAT_COUNT; i++) {
+			lua_pushnumber(L, monsterType->info.m_damageImmunities.test(i));
+			lua_rawseti(L, -2, i);
 		}
+		return 1;
+	}
+
+	std::string immunity = getString(L, 2);
+	CombatType_t combatType = COMBAT_NONE;
+	if (immunity == "physical") {
+		combatType = COMBAT_PHYSICALDAMAGE;
+	} else if (immunity == "energy") {
+		combatType = COMBAT_ENERGYDAMAGE;
+	} else if (immunity == "fire") {
+		combatType = COMBAT_FIREDAMAGE;
+	} else if (immunity == "poison" || immunity == "earth") {
+		combatType = COMBAT_EARTHDAMAGE;
+	} else if (immunity == "drown") {
+		combatType = COMBAT_DROWNDAMAGE;
+	} else if (immunity == "ice") {
+		combatType = COMBAT_ICEDAMAGE;
+	} else if (immunity == "holy") {
+		combatType = COMBAT_HOLYDAMAGE;
+	} else if (immunity == "death") {
+		combatType = COMBAT_DEATHDAMAGE;
+	} else if (immunity == "lifedrain") {
+		combatType = COMBAT_LIFEDRAIN;
+	} else if (immunity == "manadrain") {
+		combatType = COMBAT_MANADRAIN;
+	} else if (immunity == "agony") {
+		combatType = COMBAT_AGONYDAMAGE;
+	} else if (immunity == "neutral") {
+		combatType = COMBAT_NEUTRALDAMAGE;
 	} else {
+		g_logger().warn("[MonsterTypeFunctions::luaMonsterTypeCombatImmunities] - "
+						"Unknown immunity name {} for monster: {}",
+						immunity, monsterType->name);
 		lua_pushnil(L);
 	}
+
+	monsterType->info.m_damageImmunities.set(combatTypeToIndex(combatType), true);
+	pushBoolean(L, true);
 	return 1;
 }
 
 int MonsterTypeFunctions::luaMonsterTypeConditionImmunities(lua_State* L) {
 	// get: monsterType:conditionImmunities() set: monsterType:conditionImmunities(immunity)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
-	if (monsterType) {
-		if (lua_gettop(L) == 1) {
-			lua_pushnumber(L, monsterType->info.conditionImmunities);
-		} else {
-			std::string immunity = getString(L, 2);
-			if (immunity == "physical") {
-				monsterType->info.conditionImmunities |= CONDITION_BLEEDING;
-				pushBoolean(L, true);
-			} else if (immunity == "energy") {
-				monsterType->info.conditionImmunities |= CONDITION_ENERGY;
-				pushBoolean(L, true);
-			} else if (immunity == "fire") {
-				monsterType->info.conditionImmunities |= CONDITION_FIRE;
-				pushBoolean(L, true);
-			} else if (immunity == "poison" || immunity == "earth") {
-				monsterType->info.conditionImmunities |= CONDITION_POISON;
-				pushBoolean(L, true);
-			} else if (immunity == "drown") {
-				monsterType->info.conditionImmunities |= CONDITION_DROWN;
-				pushBoolean(L, true);
-			} else if (immunity == "ice") {
-				monsterType->info.conditionImmunities |= CONDITION_FREEZING;
-				pushBoolean(L, true);
-			} else if (immunity == "holy") {
-				monsterType->info.conditionImmunities |= CONDITION_DAZZLED;
-				pushBoolean(L, true);
-			} else if (immunity == "death") {
-				monsterType->info.conditionImmunities |= CONDITION_CURSED;
-				pushBoolean(L, true);
-			} else if (immunity == "paralyze") {
-				monsterType->info.conditionImmunities |= CONDITION_PARALYZE;
-				pushBoolean(L, true);
-			} else if (immunity == "outfit") {
-				monsterType->info.conditionImmunities |= CONDITION_OUTFIT;
-				pushBoolean(L, true);
-			} else if (immunity == "drunk") {
-				monsterType->info.conditionImmunities |= CONDITION_DRUNK;
-				pushBoolean(L, true);
-			} else if (immunity == "invisible" || immunity == "invisibility") {
-				monsterType->info.conditionImmunities |= CONDITION_INVISIBLE;
-				pushBoolean(L, true);
-			} else if (immunity == "bleed") {
-				monsterType->info.conditionImmunities |= CONDITION_BLEEDING;
-				pushBoolean(L, true);
-			} else {
-				SPDLOG_WARN("[MonsterTypeFunctions::luaMonsterTypeConditionImmunities] - "
-							"Unknown immunity name: {} for monster: {}",
-							immunity, monsterType->name);
-				lua_pushnil(L);
-			}
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		pushBoolean(L, false);
+		reportErrorFunc(getErrorDesc(LUA_ERROR_MONSTER_TYPE_NOT_FOUND));
+		return 1;
+	}
+
+	if (lua_gettop(L) == 1) {
+		lua_createtable(L, CONDITION_COUNT, 0);
+		for (int i = 0; i < CONDITION_COUNT; i++) {
+			lua_pushnumber(L, monsterType->info.m_conditionImmunities.test(i));
+			lua_rawseti(L, -2, i);
 		}
+		return 1;
+	}
+
+	std::string immunity = getString(L, 2);
+	ConditionType_t conditionType = CONDITION_NONE;
+	if (immunity == "physical") {
+		conditionType = CONDITION_BLEEDING;
+	} else if (immunity == "energy") {
+		conditionType = CONDITION_ENERGY;
+	} else if (immunity == "fire") {
+		conditionType = CONDITION_FIRE;
+	} else if (immunity == "poison" || immunity == "earth") {
+		conditionType = CONDITION_POISON;
+	} else if (immunity == "drown") {
+		conditionType = CONDITION_DROWN;
+	} else if (immunity == "ice") {
+		conditionType = CONDITION_FREEZING;
+	} else if (immunity == "holy") {
+		conditionType = CONDITION_DAZZLED;
+	} else if (immunity == "death") {
+		conditionType = CONDITION_CURSED;
+	} else if (immunity == "paralyze") {
+		conditionType = CONDITION_PARALYZE;
+	} else if (immunity == "outfit") {
+		conditionType = CONDITION_OUTFIT;
+	} else if (immunity == "drunk") {
+		conditionType = CONDITION_DRUNK;
+	} else if (immunity == "invisible" || immunity == "invisibility") {
+		conditionType = CONDITION_INVISIBLE;
+	} else if (immunity == "bleed") {
+		conditionType = CONDITION_BLEEDING;
 	} else {
+		g_logger().warn("[MonsterTypeFunctions::luaMonsterTypeConditionImmunities] - "
+						"Unknown immunity name: {} for monster: {}",
+						immunity, monsterType->name);
 		lua_pushnil(L);
 	}
+
+	monsterType->info.m_conditionImmunities[static_cast<size_t>(conditionType)] = true;
+	pushBoolean(L, true);
 	return 1;
 }
 
 int MonsterTypeFunctions::luaMonsterTypeGetAttackList(lua_State* L) {
 	// monsterType:getAttackList()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (!monsterType) {
 		lua_pushnil(L);
 		return 1;
@@ -747,7 +760,7 @@ int MonsterTypeFunctions::luaMonsterTypeGetAttackList(lua_State* L) {
 	lua_createtable(L, monsterType->info.attackSpells.size(), 0);
 
 	int index = 0;
-	for (const auto& spellBlock : monsterType->info.attackSpells) {
+	for (const auto &spellBlock : monsterType->info.attackSpells) {
 		lua_createtable(L, 0, 8);
 
 		setField(L, "chance", spellBlock.chance);
@@ -757,7 +770,8 @@ int MonsterTypeFunctions::luaMonsterTypeGetAttackList(lua_State* L) {
 		setField(L, "maxCombatValue", spellBlock.maxCombatValue);
 		setField(L, "range", spellBlock.range);
 		setField(L, "speed", spellBlock.speed);
-		pushUserdata<CombatSpell>(L, static_cast<CombatSpell*>(spellBlock.spell));
+		const auto combatSpell = std::static_pointer_cast<CombatSpell>(spellBlock.spell);
+		pushUserdata<CombatSpell>(L, combatSpell);
 		lua_setfield(L, -2, "spell");
 
 		lua_rawseti(L, -2, ++index);
@@ -767,16 +781,15 @@ int MonsterTypeFunctions::luaMonsterTypeGetAttackList(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeAddAttack(lua_State* L) {
 	// monsterType:addAttack(monsterspell)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
-		MonsterSpell* spell = getUserdata<MonsterSpell>(L, 2);
+		const auto spell = getUserdataShared<MonsterSpell>(L, 2);
 		if (spell) {
 			spellBlock_t sb;
 			if (g_monsters().deserializeSpell(spell, sb, monsterType->name)) {
 				monsterType->info.attackSpells.push_back(std::move(sb));
 			} else {
-				SPDLOG_WARN("Monster: {}, cant load spell: {}", monsterType->name,
-					spell->name);
+				g_logger().warn("Monster: {}, cant load spell: {}", monsterType->name, spell->name);
 			}
 		} else {
 			lua_pushnil(L);
@@ -789,7 +802,7 @@ int MonsterTypeFunctions::luaMonsterTypeAddAttack(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeGetDefenseList(lua_State* L) {
 	// monsterType:getDefenseList()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (!monsterType) {
 		lua_pushnil(L);
 		return 1;
@@ -797,9 +810,8 @@ int MonsterTypeFunctions::luaMonsterTypeGetDefenseList(lua_State* L) {
 
 	lua_createtable(L, monsterType->info.defenseSpells.size(), 0);
 
-
 	int index = 0;
-	for (const auto& spellBlock : monsterType->info.defenseSpells) {
+	for (const auto &spellBlock : monsterType->info.defenseSpells) {
 		lua_createtable(L, 0, 8);
 
 		setField(L, "chance", spellBlock.chance);
@@ -809,7 +821,8 @@ int MonsterTypeFunctions::luaMonsterTypeGetDefenseList(lua_State* L) {
 		setField(L, "maxCombatValue", spellBlock.maxCombatValue);
 		setField(L, "range", spellBlock.range);
 		setField(L, "speed", spellBlock.speed);
-		pushUserdata<CombatSpell>(L, static_cast<CombatSpell*>(spellBlock.spell));
+		const auto combatSpell = std::static_pointer_cast<CombatSpell>(spellBlock.spell);
+		pushUserdata<CombatSpell>(L, combatSpell);
 		lua_setfield(L, -2, "spell");
 
 		lua_rawseti(L, -2, ++index);
@@ -819,7 +832,7 @@ int MonsterTypeFunctions::luaMonsterTypeGetDefenseList(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeGetTypeName(lua_State* L) {
 	// monsterType:getTypeName()
-	const MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (!monsterType) {
 		return 1;
 	}
@@ -830,16 +843,15 @@ int MonsterTypeFunctions::luaMonsterTypeGetTypeName(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeAddDefense(lua_State* L) {
 	// monsterType:addDefense(monsterspell)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
-		MonsterSpell* spell = getUserdata<MonsterSpell>(L, 2);
+		const auto spell = getUserdataShared<MonsterSpell>(L, 2);
 		if (spell) {
 			spellBlock_t sb;
 			if (g_monsters().deserializeSpell(spell, sb, monsterType->name)) {
 				monsterType->info.defenseSpells.push_back(std::move(sb));
 			} else {
-				SPDLOG_WARN("Monster: {}, Cant load spell: {}", monsterType->name,
-					spell->name);
+				g_logger().warn("Monster: {}, Cant load spell: {}", monsterType->name, spell->name);
 			}
 		} else {
 			lua_pushnil(L);
@@ -852,7 +864,7 @@ int MonsterTypeFunctions::luaMonsterTypeAddDefense(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeAddElement(lua_State* L) {
 	// monsterType:addElement(type, percent)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		CombatType_t element = getNumber<CombatType_t>(L, 2);
 		monsterType->info.elementMap[element] = getNumber<int32_t>(L, 3);
@@ -865,7 +877,7 @@ int MonsterTypeFunctions::luaMonsterTypeAddElement(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeAddReflect(lua_State* L) {
 	// monsterType:addReflect(type, percent)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		CombatType_t element = getNumber<CombatType_t>(L, 2);
 		monsterType->info.reflectMap[element] = getNumber<int32_t>(L, 3);
@@ -878,7 +890,7 @@ int MonsterTypeFunctions::luaMonsterTypeAddReflect(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeAddHealing(lua_State* L) {
 	// monsterType:addHealing(type, percent)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		CombatType_t element = getNumber<CombatType_t>(L, 2);
 		monsterType->info.healingMap[element] = getNumber<int32_t>(L, 3);
@@ -891,14 +903,14 @@ int MonsterTypeFunctions::luaMonsterTypeAddHealing(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeGetElementList(lua_State* L) {
 	// monsterType:getElementList()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (!monsterType) {
 		lua_pushnil(L);
 		return 1;
 	}
 
 	lua_createtable(L, monsterType->info.elementMap.size(), 0);
-	for (const auto& elementEntry : monsterType->info.elementMap) {
+	for (const auto &elementEntry : monsterType->info.elementMap) {
 		lua_pushnumber(L, elementEntry.second);
 		lua_rawseti(L, -2, elementEntry.first);
 	}
@@ -907,7 +919,7 @@ int MonsterTypeFunctions::luaMonsterTypeGetElementList(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeAddVoice(lua_State* L) {
 	// monsterType:addVoice(sentence, interval, chance, yell)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		voiceBlock_t voice;
 		voice.text = getString(L, 2);
@@ -924,7 +936,7 @@ int MonsterTypeFunctions::luaMonsterTypeAddVoice(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeGetVoices(lua_State* L) {
 	// monsterType:getVoices()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (!monsterType) {
 		lua_pushnil(L);
 		return 1;
@@ -932,7 +944,7 @@ int MonsterTypeFunctions::luaMonsterTypeGetVoices(lua_State* L) {
 
 	int index = 0;
 	lua_createtable(L, monsterType->info.voiceVector.size(), 0);
-	for (const auto& voiceBlock : monsterType->info.voiceVector) {
+	for (const auto &voiceBlock : monsterType->info.voiceVector) {
 		lua_createtable(L, 0, 2);
 		setField(L, "text", voiceBlock.text);
 		setField(L, "yellText", voiceBlock.yellText);
@@ -943,7 +955,7 @@ int MonsterTypeFunctions::luaMonsterTypeGetVoices(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeGetLoot(lua_State* L) {
 	// monsterType:getLoot()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (!monsterType) {
 		lua_pushnil(L);
 		return 1;
@@ -955,9 +967,9 @@ int MonsterTypeFunctions::luaMonsterTypeGetLoot(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeAddLoot(lua_State* L) {
 	// monsterType:addLoot(loot)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
-		Loot* loot = getUserdata<Loot>(L, 2);
+		const auto loot = getUserdataShared<Loot>(L, 2);
 		if (loot) {
 			monsterType->loadLoot(monsterType, loot->lootBlock);
 			pushBoolean(L, true);
@@ -972,7 +984,7 @@ int MonsterTypeFunctions::luaMonsterTypeAddLoot(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeGetCreatureEvents(lua_State* L) {
 	// monsterType:getCreatureEvents()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (!monsterType) {
 		lua_pushnil(L);
 		return 1;
@@ -980,7 +992,7 @@ int MonsterTypeFunctions::luaMonsterTypeGetCreatureEvents(lua_State* L) {
 
 	int index = 0;
 	lua_createtable(L, monsterType->info.scripts.size(), 0);
-	for (const std::string& creatureEvent : monsterType->info.scripts) {
+	for (const std::string &creatureEvent : monsterType->info.scripts) {
 		pushString(L, creatureEvent);
 		lua_rawseti(L, -2, ++index);
 	}
@@ -989,9 +1001,15 @@ int MonsterTypeFunctions::luaMonsterTypeGetCreatureEvents(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeRegisterEvent(lua_State* L) {
 	// monsterType:registerEvent(name)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
-		monsterType->info.scripts.push_back(getString(L, 2));
+		auto eventName = getString(L, 2);
+		monsterType->info.scripts.insert(eventName);
+		for (const auto &[_, monster] : g_game().getMonsters()) {
+			if (monster->getMonsterType() == monsterType) {
+				monster->registerCreatureEvent(eventName);
+			}
+		}
 		pushBoolean(L, true);
 	} else {
 		lua_pushnil(L);
@@ -1005,12 +1023,12 @@ int MonsterTypeFunctions::luaMonsterTypeEventOnCallback(lua_State* L) {
 	// monsterType:onDisappear(callback)
 	// monsterType:onMove(callback)
 	// monsterType:onSay(callback)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (monsterType->loadCallback(&g_scripts().getScriptInterface())) {
 			pushBoolean(L, true);
 			return 1;
-		 }
+		}
 		pushBoolean(L, false);
 	} else {
 		lua_pushnil(L);
@@ -1020,7 +1038,7 @@ int MonsterTypeFunctions::luaMonsterTypeEventOnCallback(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeEventType(lua_State* L) {
 	// monstertype:eventType(event)
-	MonsterType* mType = getUserdata<MonsterType>(L, 1);
+	const auto mType = getUserdataShared<MonsterType>(L, 1);
 	if (mType) {
 		mType->info.eventType = getNumber<MonstersEvent_t>(L, 2);
 		pushBoolean(L, true);
@@ -1032,7 +1050,7 @@ int MonsterTypeFunctions::luaMonsterTypeEventType(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeGetSummonList(lua_State* L) {
 	// monsterType:getSummonList()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (!monsterType) {
 		lua_pushnil(L);
 		return 1;
@@ -1040,7 +1058,7 @@ int MonsterTypeFunctions::luaMonsterTypeGetSummonList(lua_State* L) {
 
 	int index = 0;
 	lua_createtable(L, monsterType->info.summons.size(), 0);
-	for (const auto& summonBlock : monsterType->info.summons) {
+	for (const auto &summonBlock : monsterType->info.summons) {
 		lua_createtable(L, 0, 3);
 		setField(L, "name", summonBlock.name);
 		setField(L, "speed", summonBlock.speed);
@@ -1052,7 +1070,7 @@ int MonsterTypeFunctions::luaMonsterTypeGetSummonList(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeAddSummon(lua_State* L) {
 	// monsterType:addSummon(name, interval, chance[, count = 1])
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		summonBlock_t summon;
 		summon.name = getString(L, 2);
@@ -1069,7 +1087,7 @@ int MonsterTypeFunctions::luaMonsterTypeAddSummon(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeMaxSummons(lua_State* L) {
 	// get: monsterType:maxSummons() set: monsterType:maxSummons(ammount)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.maxSummons);
@@ -1085,7 +1103,7 @@ int MonsterTypeFunctions::luaMonsterTypeMaxSummons(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeArmor(lua_State* L) {
 	// get: monsterType:armor() set: monsterType:armor(armor)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.armor);
@@ -1099,9 +1117,27 @@ int MonsterTypeFunctions::luaMonsterTypeArmor(lua_State* L) {
 	return 1;
 }
 
+int MonsterTypeFunctions::luaMonsterTypeMitigation(lua_State* L) {
+	// get: monsterType:mitigation() set: monsterType:mitigation(mitigation)
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		pushBoolean(L, false);
+		reportErrorFunc(getErrorDesc(LUA_ERROR_MONSTER_TYPE_NOT_FOUND));
+		return 1;
+	}
+
+	if (lua_gettop(L) == 1) {
+		lua_pushnumber(L, monsterType->info.mitigation);
+	} else {
+		monsterType->info.mitigation = getNumber<float>(L, 2);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
 int MonsterTypeFunctions::luaMonsterTypeDefense(lua_State* L) {
 	// get: monsterType:defense() set: monsterType:defense(defense)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.defense);
@@ -1117,14 +1153,14 @@ int MonsterTypeFunctions::luaMonsterTypeDefense(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeOutfit(lua_State* L) {
 	// get: monsterType:outfit() set: monsterType:outfit(outfit)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushOutfit(L, monsterType->info.outfit);
 		} else {
 			Outfit_t outfit = getOutfit(L, 2);
-			if (g_configManager().getBoolean(WARN_UNSAFE_SCRIPTS) && outfit.lookType != 0 && !g_game().isLookTypeRegistered(outfit.lookType)) {
-				SPDLOG_WARN("[MonsterTypeFunctions::luaMonsterTypeOutfit] An unregistered creature looktype type with id '{}' was blocked to prevent client crash.", outfit.lookType);
+			if (g_configManager().getBoolean(WARN_UNSAFE_SCRIPTS, __FUNCTION__) && outfit.lookType != 0 && !g_game().isLookTypeRegistered(outfit.lookType)) {
+				g_logger().warn("[MonsterTypeFunctions::luaMonsterTypeOutfit] An unregistered creature looktype type with id '{}' was blocked to prevent client crash.", outfit.lookType);
 				lua_pushnil(L);
 			} else {
 				monsterType->info.outfit = outfit;
@@ -1139,7 +1175,7 @@ int MonsterTypeFunctions::luaMonsterTypeOutfit(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeRace(lua_State* L) {
 	// get: monsterType:race() set: monsterType:race(race)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	std::string race = getString(L, 2);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
@@ -1158,8 +1194,9 @@ int MonsterTypeFunctions::luaMonsterTypeRace(lua_State* L) {
 			} else if (race == "ink") {
 				monsterType->info.race = RACE_INK;
 			} else {
-				SPDLOG_WARN("[MonsterTypeFunctions::luaMonsterTypeRace] - "
-							"Unknown race type {}", race);
+				g_logger().warn("[MonsterTypeFunctions::luaMonsterTypeRace] - "
+								"Unknown race type {}",
+								race);
 				lua_pushnil(L);
 				return 1;
 			}
@@ -1173,7 +1210,7 @@ int MonsterTypeFunctions::luaMonsterTypeRace(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeCorpseId(lua_State* L) {
 	// get: monsterType:corpseId() set: monsterType:corpseId(id)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.lookcorpse);
@@ -1189,7 +1226,7 @@ int MonsterTypeFunctions::luaMonsterTypeCorpseId(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeManaCost(lua_State* L) {
 	// get: monsterType:manaCost() set: monsterType:manaCost(mana)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.manaCost);
@@ -1204,13 +1241,13 @@ int MonsterTypeFunctions::luaMonsterTypeManaCost(lua_State* L) {
 }
 
 int MonsterTypeFunctions::luaMonsterTypeBaseSpeed(lua_State* L) {
-	// monsterType:getBaseSpeed()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	// monsterType:baseSpeed()
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
-			lua_pushnumber(L, monsterType->info.baseSpeed);
+			lua_pushnumber(L, monsterType->getBaseSpeed());
 		} else {
-			monsterType->info.baseSpeed = getNumber<uint32_t>(L, 2);
+			monsterType->setBaseSpeed(getNumber<uint16_t>(L, 2));
 			pushBoolean(L, true);
 		}
 	} else {
@@ -1220,7 +1257,7 @@ int MonsterTypeFunctions::luaMonsterTypeBaseSpeed(lua_State* L) {
 }
 int MonsterTypeFunctions::luaMonsterTypeLight(lua_State* L) {
 	// get: monsterType:light() set: monsterType:light(color, level)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (!monsterType) {
 		lua_pushnil(L);
 		return 1;
@@ -1240,7 +1277,7 @@ int MonsterTypeFunctions::luaMonsterTypeLight(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeStaticAttackChance(lua_State* L) {
 	// get: monsterType:staticAttackChance() set: monsterType:staticAttackChance(chance)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.staticAttackChance);
@@ -1256,7 +1293,7 @@ int MonsterTypeFunctions::luaMonsterTypeStaticAttackChance(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeTargetDistance(lua_State* L) {
 	// get: monsterType:targetDistance() set: monsterType:targetDistance(distance)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.targetDistance);
@@ -1272,15 +1309,15 @@ int MonsterTypeFunctions::luaMonsterTypeTargetDistance(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeYellChance(lua_State* L) {
 	// get: monsterType:yellChance() set: monsterType:yellChance(chance)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			if (lua_gettop(L) == 1) {
-			lua_pushnumber(L, monsterType->info.yellChance);
-		} else {
-			monsterType->info.yellChance = getNumber<uint32_t>(L, 2);
-			pushBoolean(L, true);
-		}
+				lua_pushnumber(L, monsterType->info.yellChance);
+			} else {
+				monsterType->info.yellChance = getNumber<uint32_t>(L, 2);
+				pushBoolean(L, true);
+			}
 		} else {
 			monsterType->info.yellChance = getNumber<uint32_t>(L, 2);
 			pushBoolean(L, true);
@@ -1293,7 +1330,7 @@ int MonsterTypeFunctions::luaMonsterTypeYellChance(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeYellSpeedTicks(lua_State* L) {
 	// get: monsterType:yellSpeedTicks() set: monsterType:yellSpeedTicks(rate)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.yellSpeedTicks);
@@ -1309,7 +1346,7 @@ int MonsterTypeFunctions::luaMonsterTypeYellSpeedTicks(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeChangeTargetChance(lua_State* L) {
 	// monsterType:getChangeTargetChance()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.changeTargetChance);
@@ -1325,7 +1362,7 @@ int MonsterTypeFunctions::luaMonsterTypeChangeTargetChance(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeChangeTargetSpeed(lua_State* L) {
 	// get: monsterType:changeTargetSpeed() set: monsterType:changeTargetSpeed(speed)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.changeTargetSpeed);
@@ -1341,7 +1378,7 @@ int MonsterTypeFunctions::luaMonsterTypeChangeTargetSpeed(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeCanWalkOnEnergy(lua_State* L) {
 	// get: monsterType:canWalkOnEnergy() set: monsterType:canWalkOnEnergy(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.canWalkOnEnergy);
@@ -1357,7 +1394,7 @@ int MonsterTypeFunctions::luaMonsterTypeCanWalkOnEnergy(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeCanWalkOnFire(lua_State* L) {
 	// get: monsterType:canWalkOnFire() set: monsterType:canWalkOnFire(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.canWalkOnFire);
@@ -1373,7 +1410,7 @@ int MonsterTypeFunctions::luaMonsterTypeCanWalkOnFire(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeCanWalkOnPoison(lua_State* L) {
 	// get: monsterType:canWalkOnPoison() set: monsterType:canWalkOnPoison(bool)
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			pushBoolean(L, monsterType->info.canWalkOnPoison);
@@ -1389,7 +1426,7 @@ int MonsterTypeFunctions::luaMonsterTypeCanWalkOnPoison(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeStrategiesTargetNearest(lua_State* L) {
 	// monsterType:strategiesTargetNearest()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.strategiesTargetNearest);
@@ -1405,7 +1442,7 @@ int MonsterTypeFunctions::luaMonsterTypeStrategiesTargetNearest(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeStrategiesTargetHealth(lua_State* L) {
 	// monsterType:strategiesTargetHealth()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.strategiesTargetHealth);
@@ -1421,7 +1458,7 @@ int MonsterTypeFunctions::luaMonsterTypeStrategiesTargetHealth(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeStrategiesTargetDamage(lua_State* L) {
 	// monsterType:strategiesTargetDamage()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.strategiesTargetDamage);
@@ -1437,7 +1474,7 @@ int MonsterTypeFunctions::luaMonsterTypeStrategiesTargetDamage(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeStrategiesTargetRandom(lua_State* L) {
 	// monsterType:strategiesTargetRandom()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.strategiesTargetRandom);
@@ -1457,7 +1494,7 @@ int MonsterTypeFunctions::luaMonsterTypeStrategiesTargetRandom(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeRespawnTypePeriod(lua_State* L) {
 	// monsterType:respawnTypePeriod()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.respawnType.period);
@@ -1473,7 +1510,7 @@ int MonsterTypeFunctions::luaMonsterTypeRespawnTypePeriod(lua_State* L) {
 
 int MonsterTypeFunctions::luaMonsterTypeRespawnTypeIsUnderground(lua_State* L) {
 	// monsterType:respawnTypeIsUnderground()
-	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
 	if (monsterType) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.respawnType.underground);
@@ -1484,5 +1521,165 @@ int MonsterTypeFunctions::luaMonsterTypeRespawnTypeIsUnderground(lua_State* L) {
 	} else {
 		lua_pushnil(L);
 	}
+	return 1;
+}
+
+int MonsterTypeFunctions::luaMonsterTypeBossRace(lua_State* L) {
+	// set: monsterType:bosstiaryRace(raceId, class)
+	// get: monsterType:bosstiaryRace() = this return only class name
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		pushBoolean(L, false);
+		reportErrorFunc(getErrorDesc(LUA_ERROR_MONSTER_TYPE_NOT_FOUND));
+		return 0;
+	}
+
+	if (lua_gettop(L) == 1) {
+		if (monsterType->info.bosstiaryClass.empty()) {
+			lua_pushnil(L);
+			return 1;
+		}
+		pushString(L, monsterType->info.bosstiaryClass);
+	} else {
+		auto bossRace = getNumber<uint8_t>(L, 2, 0);
+		auto bossClass = getString(L, 3);
+		monsterType->info.bosstiaryRace = magic_enum::enum_value<BosstiaryRarity_t>(bossRace);
+		monsterType->info.bosstiaryClass = bossClass;
+		pushBoolean(L, true);
+	}
+
+	return 1;
+}
+
+int MonsterTypeFunctions::luaMonsterTypeBossRaceId(lua_State* L) {
+	// set: monsterType:bossRaceId(raceId)
+	// get: monsterType:bossRaceId()
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		pushBoolean(L, false);
+		reportErrorFunc(getErrorDesc(LUA_ERROR_MONSTER_TYPE_NOT_FOUND));
+		return 0;
+	}
+
+	if (lua_gettop(L) == 1) {
+		if (monsterType->info.bosstiaryClass.empty()) {
+			lua_pushnumber(L, 0);
+		} else {
+			lua_pushnumber(L, static_cast<lua_Number>(monsterType->info.bosstiaryRace));
+		}
+	} else {
+		auto raceId = getNumber<uint16_t>(L, 2, 0);
+		monsterType->info.raceid = raceId;
+		g_ioBosstiary().addBosstiaryMonster(raceId, monsterType->name);
+		pushBoolean(L, true);
+	}
+
+	return 1;
+}
+
+int MonsterTypeFunctions::luaMonsterTypeSoundChance(lua_State* L) {
+	// get: monsterType:soundChance() set: monsterType:soundChance(chance)
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_CREATURE_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	if (lua_gettop(L) == 1) {
+		lua_pushnumber(L, monsterType->info.soundChance);
+	} else {
+		monsterType->info.soundChance = getNumber<uint32_t>(L, 2);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int MonsterTypeFunctions::luaMonsterTypeSoundSpeedTicks(lua_State* L) {
+	// get: monsterType:soundSpeedTicks() set: monsterType:soundSpeedTicks(ticks)
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_CREATURE_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	if (lua_gettop(L) == 1) {
+		lua_pushnumber(L, monsterType->info.soundSpeedTicks);
+	} else {
+		monsterType->info.soundSpeedTicks = getNumber<uint32_t>(L, 2);
+		pushBoolean(L, true);
+	}
+	return 1;
+}
+
+int MonsterTypeFunctions::luaMonsterTypeAddSound(lua_State* L) {
+	// monsterType:addSound(soundId)
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_CREATURE_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	monsterType->info.soundVector.push_back(getNumber<SoundEffect_t>(L, 2));
+	pushBoolean(L, true);
+	return 1;
+}
+
+int MonsterTypeFunctions::luaMonsterTypeGetSounds(lua_State* L) {
+	// monsterType:getSounds()
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	int index = 0;
+	lua_createtable(L, static_cast<int>(monsterType->info.soundVector.size()), 0);
+	for (const auto &sound : monsterType->info.soundVector) {
+		++index;
+		lua_createtable(L, 0, 1);
+		lua_pushnumber(L, static_cast<lua_Number>(sound));
+		lua_rawseti(L, -2, index);
+	}
+	return 1;
+}
+
+int MonsterTypeFunctions::luaMonsterTypedeathSound(lua_State* L) {
+	// get: monsterType:deathSound() set: monsterType:deathSound(sound)
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_CREATURE_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	if (lua_gettop(L) == 1) {
+		lua_pushnumber(L, static_cast<lua_Number>(monsterType->info.deathSound));
+	} else {
+		monsterType->info.deathSound = getNumber<SoundEffect_t>(L, 2);
+		pushBoolean(L, true);
+	}
+
+	return 1;
+}
+
+int MonsterTypeFunctions::luaMonsterTypeVariant(lua_State* L) {
+	// get: monsterType:variant() set: monsterType:variant(variantName)
+	const auto monsterType = getUserdataShared<MonsterType>(L, 1);
+	if (!monsterType) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_CREATURE_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	if (lua_gettop(L) == 1) {
+		pushString(L, monsterType->variantName);
+	} else {
+		monsterType->variantName = getString(L, 2);
+		pushBoolean(L, true);
+	}
+
 	return 1;
 }

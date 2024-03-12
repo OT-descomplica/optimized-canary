@@ -5,7 +5,7 @@ local foods = {
 	3585, -- apple
 	3600, -- bread
 	3601, -- roll
-	3607  -- cheese
+	3607, -- cheese
 }
 
 local spell = Spell("instant")
@@ -24,6 +24,7 @@ spell:name("Food")
 spell:words("exevo pan")
 spell:group("support")
 spell:vocation("druid;true", "elder druid;true")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_FOOD)
 spell:id(42)
 spell:cooldown(2 * 1000)
 spell:groupCooldown(2 * 1000)

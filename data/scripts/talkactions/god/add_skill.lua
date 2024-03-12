@@ -21,29 +21,27 @@ local function getExpForLevel(level)
 	return ((50 * level * level * level) - (150 * level * level) + (400 * level)) / 3
 end
 
-
 local addSkill = TalkAction("/addskill")
 
 function addSkill.onSay(player, words, param)
-	if not player:getGroup():getAccess() or player:getAccountType() < ACCOUNT_TYPE_GOD then
-		return true
-	end
+	-- create log
+	logCommand(player, words, param)
 
 	if param == "" then
 		player:sendCancelMessage("Command param required.")
-		return false
+		return true
 	end
 
 	local split = param:split(",")
 	if not split[2] then
 		player:sendCancelMessage("Insufficient parameters.")
-		return false
+		return true
 	end
 
 	local target = Player(split[1])
 	if not target then
 		player:sendCancelMessage("A player with that name is not online.")
-		return false
+		return true
 	end
 
 	-- Trim left
@@ -62,16 +60,17 @@ function addSkill.onSay(player, words, param)
 		target:addExperience(addExp, false)
 	elseif ch == "m" then
 		for i = 1, count do
-			target:addManaSpent(target:getVocation():getRequiredManaSpent(target:getBaseMagicLevel() + 1) - target:getManaSpent())
+			target:addManaSpent(target:getVocation():getRequiredManaSpent(target:getBaseMagicLevel() + 1) - target:getManaSpent(), true)
 		end
 	else
 		local skillId = getSkillId(split[2])
 		for i = 1, count do
-			target:addSkillTries(skillId, target:getVocation():getRequiredSkillTries(skillId, target:getSkillLevel(skillId) + 1) - target:getSkillTries(skillId))
+			target:addSkillTries(skillId, target:getVocation():getRequiredSkillTries(skillId, target:getSkillLevel(skillId) + 1) - target:getSkillTries(skillId), true)
 		end
 	end
-	return false
+	return true
 end
 
 addSkill:separator(" ")
+addSkill:groupType("god")
 addSkill:register()

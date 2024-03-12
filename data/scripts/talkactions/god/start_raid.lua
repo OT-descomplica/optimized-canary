@@ -1,24 +1,23 @@
 local startRaid = TalkAction("/raid")
 
 function startRaid.onSay(player, words, param)
-	if not player:getGroup():getAccess() or player:getAccountType() < ACCOUNT_TYPE_GOD then
-		return true
-	end
+	-- create log
+	logCommand(player, words, param)
 
 	if param == "" then
 		player:sendCancelMessage("Command param required.")
-		return false
+		return true
 	end
 
-	logCommand(player, words, param)
 	local returnValue = Game.startRaid(param)
 	if returnValue ~= RETURNVALUE_NOERROR then
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, Game.getReturnMessage(returnValue))
+		player:sendTextMessage(MESSAGE_ADMINISTRATOR, Game.getReturnMessage(returnValue))
 	else
-		player:sendTextMessage(MESSAGE_LOOK, "Raid started.")
+		player:sendTextMessage(MESSAGE_ADMINISTRATOR, "Raid started.")
 	end
-	return false
+	return true
 end
 
 startRaid:separator(" ")
+startRaid:groupType("god")
 startRaid:register()

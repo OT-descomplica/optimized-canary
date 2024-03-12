@@ -1,14 +1,15 @@
 local openServer = TalkAction("/openserver")
 
 function openServer.onSay(player, words, param)
-	if not player:getGroup():getAccess() or player:getAccountType() < ACCOUNT_TYPE_GOD then
-		return true
-	end
+	-- create log
+	logCommand(player, words, param)
 
 	Game.setGameState(GAME_STATE_NORMAL)
-	player:sendTextMessage(MESSAGE_LOOK, "Server is now open.")
-	return false
+	player:sendTextMessage(MESSAGE_ADMINISTRATOR, "Server is now open.")
+	Webhook.sendMessage(":green_circle: Server was opened by: **" .. player:getName() .. "**", announcementChannels["serverAnnouncements"])
+	return true
 end
 
 openServer:separator(" ")
+openServer:groupType("god")
 openServer:register()

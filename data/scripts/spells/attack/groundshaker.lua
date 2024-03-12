@@ -6,7 +6,7 @@ combat:setParameter(COMBAT_PARAM_USECHARGES, 1)
 combat:setArea(createCombatArea(AREA_CIRCLE3X3))
 
 function onGetFormulaValues(player, skill, attack, factor)
-	local level = player:getLevel()	
+	local level = player:getLevel()
 	local min = (level / 5) + (skill + attack) * 0.5
 	local max = (level / 5) + (skill + attack) * 1.1
 	return -min * 1.28, -max * 1.28 -- TODO : Use New Real Formula instead of an %
@@ -24,6 +24,7 @@ spell:group("attack")
 spell:id(106)
 spell:name("Groundshaker")
 spell:words("exori mas")
+spell:castSound(SOUND_EFFECT_TYPE_SPELL_GROUNDSHAKER)
 spell:level(33)
 spell:mana(160)
 spell:isPremium(true)

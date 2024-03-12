@@ -1,86 +1,93 @@
 /**
- * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019  Mark Samman <mark.samman@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-*/
+ * Canary - A free and open-source MMORPG server emulator
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
+ */
 
-#ifndef SRC_GAME_SCHEDUNLING_EVENTS_SCHEDULER_HPP_
-#define SRC_GAME_SCHEDUNLING_EVENTS_SCHEDULER_HPP_
+#pragma once
 
-// #include <unordered_set>
+#include "lib/di/container.hpp"
+#include "utils/tools.hpp"
 
-#include "utils/tools.h"
-
-class EventsScheduler
-{
-	public:
-		EventsScheduler() = default;
-
-		// Singleton - ensures we don't accidentally copy it.
-		EventsScheduler(const EventsScheduler&) = delete;
-		EventsScheduler& operator=(const EventsScheduler&) = delete;
-
-		static EventsScheduler& getInstance() {
-			// Guaranteed to be destroyed
-			static EventsScheduler instance;
-			// Instantiated on first use
-			return instance;
-		}
-
-		// Event schedule xml load
-		bool loadScheduleEventFromXml() const;
-		
-		// Event schedule
-		uint16_t getExpSchedule() const {
-			return expSchedule;
-		}
-		void setExpSchedule(uint16_t exprate) {
-			expSchedule = (expSchedule * exprate)/100;
-		}
-
-		uint32_t getLootSchedule() const {
-			return lootSchedule;
-		}
-		void setLootSchedule(uint32_t lootrate) {
-			lootSchedule = (lootSchedule * lootrate)/100;
-		}
-
-		uint32_t getSpawnMonsterSchedule() const {
-			return spawnMonsterSchedule;
-		}
-		void setSpawnMonsterSchedule(uint32_t spawnrate) {
-			spawnMonsterSchedule = (spawnMonsterSchedule * spawnrate)/100;
-		}
-
-		uint16_t getSkillSchedule() const {
-			return skillSchedule;
-		}
-		void setSkillSchedule(uint16_t skillrate) {
-			skillSchedule = (skillSchedule * skillrate)/100;
-		}
-		
-	private:
-		// Event schedule
-		uint16_t expSchedule = 100;
-		uint32_t lootSchedule = 100;
-		uint16_t skillSchedule = 100;
-		uint32_t spawnMonsterSchedule = 100;
-
+struct EventScheduler {
+	std::string name;
+	int startDays;
+	int endDays;
 };
 
-constexpr auto g_eventsScheduler = &EventsScheduler::getInstance;
+struct EventRates {
+	uint16_t exprate = 100;
+	uint32_t lootrate = 100;
+	uint32_t bosslootrate = 100;
+	uint32_t spawnrate = 100;
+	uint16_t skillrate = 100;
+};
 
-#endif  // SRC_GAME_SCHEDUNLING_EVENTS_SCHEDULER_HPP_
+class EventsScheduler {
+public:
+	EventsScheduler() = default;
+
+	// Singleton - ensures we don't accidentally copy it.
+	EventsScheduler(const EventsScheduler &) = delete;
+	EventsScheduler &operator=(const EventsScheduler &) = delete;
+
+	static EventsScheduler &getInstance() {
+		return inject<EventsScheduler>();
+	}
+
+	// Event schedule xml load
+	bool loadScheduleEventFromXml();
+
+	// Event schedule
+	uint16_t getExpSchedule() const {
+		return expSchedule;
+	}
+	void setExpSchedule(uint16_t exprate) {
+		expSchedule = (expSchedule * exprate) / 100;
+	}
+
+	uint32_t getLootSchedule() const {
+		return lootSchedule;
+	}
+	void setLootSchedule(uint32_t lootrate) {
+		lootSchedule = (lootSchedule * lootrate) / 100;
+	}
+
+	uint32_t getBossLootSchedule() const {
+		return bossLootSchedule;
+	}
+	void setBossLootSchedule(uint32_t bosslootrate) {
+		bossLootSchedule = (bossLootSchedule * bosslootrate) / 100;
+	}
+
+	uint32_t getSpawnMonsterSchedule() const {
+		return spawnMonsterSchedule;
+	}
+	void setSpawnMonsterSchedule(uint32_t spawnrate) {
+		spawnMonsterSchedule = (spawnMonsterSchedule * spawnrate) / 100;
+	}
+
+	uint16_t getSkillSchedule() const {
+		return skillSchedule;
+	}
+	void setSkillSchedule(uint16_t skillrate) {
+		skillSchedule = (skillSchedule * skillrate) / 100;
+	}
+
+private:
+	// Event schedule
+	uint16_t expSchedule = 100;
+	uint32_t lootSchedule = 100;
+	uint32_t bossLootSchedule = 100;
+	uint16_t skillSchedule = 100;
+	uint32_t spawnMonsterSchedule = 100;
+
+	std::vector<EventScheduler> eventScheduler;
+
+	std::string join(const std::vector<std::string> &vec, const std::string &delim);
+};
+
+constexpr auto g_eventsScheduler = EventsScheduler::getInstance;

@@ -1,35 +1,23 @@
 /**
  * Canary - A free and open-source MMORPG server emulator
- * Copyright (C) 2021 OpenTibiaBR <opentibiabr@outlook.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#include "otpch.h"
+#include "pch.hpp"
 
-#include <boost/range/adaptor/reversed.hpp>
-
-#include "game/game.h"
-#include "items/item.h"
+#include "game/game.hpp"
+#include "items/item.hpp"
 #include "lua/functions/items/container_functions.hpp"
 
 int ContainerFunctions::luaContainerCreate(lua_State* L) {
 	// Container(uid)
 	uint32_t id = getNumber<uint32_t>(L, 2);
 
-	Container* container = getScriptEnv()->getContainerByUID(id);
+	std::shared_ptr<Container> container = getScriptEnv()->getContainerByUID(id);
 	if (container) {
 		pushUserdata(L, container);
 		setMetatable(L, -1, "Container");
@@ -41,7 +29,7 @@ int ContainerFunctions::luaContainerCreate(lua_State* L) {
 
 int ContainerFunctions::luaContainerGetSize(lua_State* L) {
 	// container:getSize()
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (container) {
 		lua_pushnumber(L, container->size());
 	} else {
@@ -50,9 +38,20 @@ int ContainerFunctions::luaContainerGetSize(lua_State* L) {
 	return 1;
 }
 
+int ContainerFunctions::luaContainerGetMaxCapacity(lua_State* L) {
+	// container:getMaxCapacity()
+	const auto &container = getUserdataShared<Container>(L, 1);
+	if (container) {
+		lua_pushnumber(L, container->getMaxCapacity());
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
 int ContainerFunctions::luaContainerGetCapacity(lua_State* L) {
 	// container:getCapacity()
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (container) {
 		lua_pushnumber(L, container->capacity());
 	} else {
@@ -63,7 +62,7 @@ int ContainerFunctions::luaContainerGetCapacity(lua_State* L) {
 
 int ContainerFunctions::luaContainerGetEmptySlots(lua_State* L) {
 	// container:getEmptySlots([recursive = false])
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (!container) {
 		lua_pushnil(L);
 		return 1;
@@ -73,7 +72,7 @@ int ContainerFunctions::luaContainerGetEmptySlots(lua_State* L) {
 	bool recursive = getBoolean(L, 2, false);
 	if (recursive) {
 		for (ContainerIterator it = container->iterator(); it.hasNext(); it.advance()) {
-			if (Container* tmpContainer = (*it)->getContainer()) {
+			if (std::shared_ptr<Container> tmpContainer = (*it)->getContainer()) {
 				slots += tmpContainer->capacity() - tmpContainer->size();
 			}
 		}
@@ -84,7 +83,7 @@ int ContainerFunctions::luaContainerGetEmptySlots(lua_State* L) {
 
 int ContainerFunctions::luaContainerGetItemHoldingCount(lua_State* L) {
 	// container:getItemHoldingCount()
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (container) {
 		lua_pushnumber(L, container->getItemHoldingCount());
 	} else {
@@ -95,14 +94,14 @@ int ContainerFunctions::luaContainerGetItemHoldingCount(lua_State* L) {
 
 int ContainerFunctions::luaContainerGetItem(lua_State* L) {
 	// container:getItem(index)
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (!container) {
 		lua_pushnil(L);
 		return 1;
 	}
 
 	uint32_t index = getNumber<uint32_t>(L, 2);
-	Item* item = container->getItemByIndex(index);
+	std::shared_ptr<Item> item = container->getItemByIndex(index);
 	if (item) {
 		pushUserdata<Item>(L, item);
 		setItemMetatable(L, -1, item);
@@ -114,8 +113,8 @@ int ContainerFunctions::luaContainerGetItem(lua_State* L) {
 
 int ContainerFunctions::luaContainerHasItem(lua_State* L) {
 	// container:hasItem(item)
-	Item* item = getUserdata<Item>(L, 2);
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Item> item = getUserdataShared<Item>(L, 2);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (container) {
 		pushBoolean(L, container->isHoldingItem(item));
 	} else {
@@ -126,9 +125,10 @@ int ContainerFunctions::luaContainerHasItem(lua_State* L) {
 
 int ContainerFunctions::luaContainerAddItem(lua_State* L) {
 	// container:addItem(itemId[, count/subType = 1[, index = INDEX_WHEREEVER[, flags = 0]]])
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (!container) {
 		lua_pushnil(L);
+		reportErrorFunc("Container is nullptr");
 		return 1;
 	}
 
@@ -139,19 +139,21 @@ int ContainerFunctions::luaContainerAddItem(lua_State* L) {
 		itemId = Item::items.getItemIdByName(getString(L, 2));
 		if (itemId == 0) {
 			lua_pushnil(L);
+			reportErrorFunc("Item id is wrong");
 			return 1;
 		}
 	}
 
 	uint32_t count = getNumber<uint32_t>(L, 3, 1);
-	const ItemType& it = Item::items[itemId];
+	const ItemType &it = Item::items[itemId];
 	if (it.stackable) {
-		count = std::min<uint16_t>(count, 100);
+		count = std::min<uint16_t>(count, it.stackSize);
 	}
 
-	Item* item = Item::CreateItem(itemId, count);
+	std::shared_ptr<Item> item = Item::CreateItem(itemId, count);
 	if (!item) {
 		lua_pushnil(L);
+		reportErrorFunc("Item is nullptr");
 		return 1;
 	}
 
@@ -163,21 +165,20 @@ int ContainerFunctions::luaContainerAddItem(lua_State* L) {
 		pushUserdata<Item>(L, item);
 		setItemMetatable(L, -1, item);
 	} else {
-		delete item;
-		lua_pushnil(L);
+		reportErrorFunc(fmt::format("Cannot add item to container, error code: '{}'", getReturnMessage(ret)));
 	}
 	return 1;
 }
 
 int ContainerFunctions::luaContainerAddItemEx(lua_State* L) {
 	// container:addItemEx(item[, index = INDEX_WHEREEVER[, flags = 0]])
-	Item* item = getUserdata<Item>(L, 2);
+	std::shared_ptr<Item> item = getUserdataShared<Item>(L, 2);
 	if (!item) {
 		lua_pushnil(L);
 		return 1;
 	}
 
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (!container) {
 		lua_pushnil(L);
 		return 1;
@@ -201,7 +202,7 @@ int ContainerFunctions::luaContainerAddItemEx(lua_State* L) {
 
 int ContainerFunctions::luaContainerGetCorpseOwner(lua_State* L) {
 	// container:getCorpseOwner()
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (container) {
 		lua_pushnumber(L, container->getCorpseOwner());
 	} else {
@@ -212,7 +213,7 @@ int ContainerFunctions::luaContainerGetCorpseOwner(lua_State* L) {
 
 int ContainerFunctions::luaContainerGetItemCountById(lua_State* L) {
 	// container:getItemCountById(itemId[, subType = -1])
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (!container) {
 		lua_pushnil(L);
 		return 1;
@@ -235,10 +236,10 @@ int ContainerFunctions::luaContainerGetItemCountById(lua_State* L) {
 }
 
 int ContainerFunctions::luaContainerGetContentDescription(lua_State* L) {
-	// container:getContentDescription()
-	Container* container = getUserdata<Container>(L, 1);
+	// container:getContentDescription([oldProtocol])
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (container) {
-		pushString(L, container->getContentDescription());
+		pushString(L, container->getContentDescription(getBoolean(L, 2, false)));
 	} else {
 		lua_pushnil(L);
 	}
@@ -247,19 +248,19 @@ int ContainerFunctions::luaContainerGetContentDescription(lua_State* L) {
 
 int ContainerFunctions::luaContainerGetItems(lua_State* L) {
 	// container:getItems([recursive = false])
-	const Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (!container) {
 		lua_pushnil(L);
 		return 1;
 	}
 
 	bool recursive = getBoolean(L, 2, false);
-	std::vector<Item*> items = container->getItems(recursive);
+	std::vector<std::shared_ptr<Item>> items = container->getItems(recursive);
 
 	lua_createtable(L, static_cast<int>(items.size()), 0);
 
 	int index = 0;
-	for (Item* item : items) {
+	for (std::shared_ptr<Item> item : items) {
 		index++;
 		pushUserdata(L, item);
 		setItemMetatable(L, -1, item);
@@ -270,16 +271,16 @@ int ContainerFunctions::luaContainerGetItems(lua_State* L) {
 
 int ContainerFunctions::luaContainerRegisterReward(lua_State* L) {
 	// container:registerReward()
-	Container* container = getUserdata<Container>(L, 1);
+	std::shared_ptr<Container> container = getUserdataShared<Container>(L, 1);
 	if (!container) {
 		lua_pushnil(L);
 		return 1;
 	}
 
-	auto timestamp = time(nullptr);
-	Item * rewardContainer = Item::CreateItem(ITEM_REWARD_CONTAINER);
-	rewardContainer->setIntAttr(ITEM_ATTRIBUTE_DATE, timestamp);
-	container->setIntAttr(ITEM_ATTRIBUTE_DATE, timestamp);
+	int64_t rewardId = getTimeMsNow();
+	std::shared_ptr<Item> rewardContainer = Item::CreateItem(ITEM_REWARD_CONTAINER);
+	rewardContainer->setAttribute(ItemAttribute_t::DATE, rewardId);
+	container->setAttribute(ItemAttribute_t::DATE, rewardId);
 	container->internalAddThing(rewardContainer);
 	container->setRewardCorpse();
 

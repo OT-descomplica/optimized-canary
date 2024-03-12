@@ -1,126 +1,128 @@
 /**
- * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019  Mark Samman <mark.samman@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Canary - A free and open-source MMORPG server emulator
+ * Copyright (©) 2019-2024 OpenTibiaBR <opentibiabr@outlook.com>
+ * Repository: https://github.com/opentibiabr/canary
+ * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
+ * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
+ * Website: https://docs.opentibiabr.com/
  */
 
-#include "otpch.h"
+#include "pch.hpp"
 
-#include <boost/filesystem.hpp>
-
-#include "creatures/combat/spells.h"
-#include "creatures/interactions/chat.h"
-#include "creatures/players/imbuements/imbuements.h"
-#include "items/weapons/weapons.h"
-#include "lua/creature/actions.h"
-#include "lua/creature/events.h"
-#include "lua/creature/movement.h"
-#include "lua/creature/talkaction.h"
-#include "lua/global/globalevent.h"
-#include "lua/modules/modules.h"
-#include "lua/scripts/lua_environment.hpp"
-#include "lua/scripts/scripts.h"
+#include "creatures/players/imbuements/imbuements.hpp"
+#include "lua/global/globalevent.hpp"
+#include "items/weapons/weapons.hpp"
+#include "lua/creature/movement.hpp"
+#include "lua/scripts/scripts.hpp"
+#include "creatures/combat/spells.hpp"
+#include "lua/callbacks/events_callbacks.hpp"
 
 Scripts::Scripts() :
 	scriptInterface("Scripts Interface") {
 	scriptInterface.initState();
 }
 
-Scripts::~Scripts() {
-	scriptInterface.reInitState();
+void Scripts::clearAllScripts() const {
+	g_actions().clear();
+	g_creatureEvents().clear();
+	g_talkActions().clear();
+	g_globalEvents().clear();
+	g_spells().clear();
+	g_moveEvents().clear();
+	g_weapons().clear();
+	g_callbacks().clear();
+	g_monsters().clear();
 }
 
-bool Scripts::loadEventSchedulerScripts(const std::string& fileName) {
-	namespace fs = boost::filesystem;
-
-	const auto dir = fs::current_path() / "data" / "events" / "scripts" / "scheduler";
-	if(!fs::exists(dir) || !fs::is_directory(dir)) {
-		SPDLOG_WARN("Can not load folder 'scheduler' on '/data/events/scripts'");
+bool Scripts::loadEventSchedulerScripts(const std::string &fileName) {
+	auto coreFolder = g_configManager().getString(CORE_DIRECTORY, __FUNCTION__);
+	const auto dir = std::filesystem::current_path() / coreFolder / "events" / "scripts" / "scheduler";
+	if (!std::filesystem::exists(dir) || !std::filesystem::is_directory(dir)) {
+		g_logger().warn("{} - Can not load folder 'scheduler' on {}/events/scripts'", __FUNCTION__, coreFolder);
 		return false;
 	}
 
-	fs::recursive_directory_iterator endit;
-	for(fs::recursive_directory_iterator it(dir); it != endit; ++it) {
-		if(fs::is_regular_file(*it) && it->path().extension() == ".lua") {
+	std::filesystem::recursive_directory_iterator endit;
+	for (std::filesystem::recursive_directory_iterator it(dir); it != endit; ++it) {
+		if (std::filesystem::is_regular_file(*it) && it->path().extension() == ".lua") {
 			if (it->path().filename().string() == fileName) {
-				if(scriptInterface.loadFile(it->path().string()) == -1) {
-					SPDLOG_ERROR(it->path().string());
-					SPDLOG_ERROR(scriptInterface.getLastLuaError());
+				if (scriptInterface.loadFile(it->path().string(), it->path().filename().string()) == -1) {
+					g_logger().error(it->path().string());
+					g_logger().error(scriptInterface.getLastLuaError());
 					continue;
 				}
 				return true;
 			}
 		}
 	}
+
 	return false;
 }
 
-bool Scripts::loadScripts(std::string folderName, bool isLib, bool reload) {
-	namespace fs = boost::filesystem;
-
-	const auto dir = fs::current_path() / "data" / folderName;
-	if(!fs::exists(dir) || !fs::is_directory(dir)) {
-		SPDLOG_ERROR("Can not load folder {}", folderName);
+bool Scripts::loadScripts(std::string loadPath, bool isLib, bool reload) {
+	const auto dir = std::filesystem::current_path() / loadPath;
+	// Checks if the folder exists and is really a folder
+	if (!std::filesystem::exists(dir) || !std::filesystem::is_directory(dir)) {
+		g_logger().error("Can not load folder {}", loadPath);
 		return false;
 	}
 
-	fs::recursive_directory_iterator endit;
-	std::vector<fs::path> v;
-	std::string disable = ("#");
-	for(fs::recursive_directory_iterator it(dir); it != endit; ++it) {
-		auto fn = it->path().parent_path().filename();
-		if ((fn == "lib" && !isLib) || fn == "events") {
+	// Declare a string variable to store the last directory
+	std::string lastDirectory;
+	// Recursive iterate through all entries in the directory
+	for (const auto &entry : std::filesystem::recursive_directory_iterator(dir)) {
+		// Get the filename of the entry as a string
+		const auto realPath = entry.path();
+		std::string fileFolder = realPath.parent_path().filename().string();
+		// Script folder, example: "actions"
+		std::string scriptFolder = realPath.parent_path().string();
+		// Create a string_view for the fileFolder and scriptFolder strings
+		std::string_view fileFolderView(fileFolder);
+		std::string_view scriptFolderView(scriptFolder);
+		// Filename, example: "demon.lua"
+		std::string file(realPath.filename().string());
+		if (!std::filesystem::is_regular_file(entry) || realPath.extension() != ".lua") {
+			// Skip this entry if it is not a regular file or does not have a .lua extension
 			continue;
 		}
-		if(fs::is_regular_file(*it) && it->path().extension() == ".lua") {
-			size_t found = it->path().filename().string().find(disable);
-			if (found != std::string::npos) {
-				if (g_configManager().getBoolean(SCRIPTS_CONSOLE_LOGS)) {
-					SPDLOG_INFO("{} [disabled]", it->path().filename().string());
+
+		// Check if file start with "#"
+		if (std::string disable("#");
+			file.front() == disable.front()) {
+			// Send log of disabled script
+			if (g_configManager().getBoolean(SCRIPTS_CONSOLE_LOGS, __FUNCTION__)) {
+				g_logger().info("[script]: {} [disabled]", realPath.filename().string());
+			}
+			// Skip for next loop and ignore disabled file
+			continue;
+		}
+
+		// If the file is a library file or if the file's parent directory is not "lib" or "events"
+		if (isLib || (fileFolderView != "lib" && fileFolderView != "events")) {
+			// If console logs are enabled and the file is not a library file
+			if (g_configManager().getBoolean(SCRIPTS_CONSOLE_LOGS, __FUNCTION__)) {
+				// If the current directory is different from the last directory that was logged
+				if (lastDirectory.empty() || lastDirectory != scriptFolderView) {
+					// Update the last directory variable and log the directory name
+					g_logger().info("Loading folder: [{}]", realPath.parent_path().filename().string());
 				}
+				lastDirectory = realPath.parent_path().string();
+			}
+
+			// If the function 'loadFile' returns -1, then there was an error loading the file
+			if (scriptInterface.loadFile(realPath.string(), realPath.filename().string()) == -1) {
+				// Log the error and the file path, and skip to the next iteration of the loop.
+				g_logger().error(realPath.string());
+				g_logger().error(scriptInterface.getLastLuaError());
 				continue;
 			}
-			v.push_back(it->path());
-		}
-	}
-	sort(v.begin(), v.end());
-	std::string redir;
-	for (auto it = v.begin(); it != v.end(); ++it) {
-		const std::string scriptFile = it->string();
-		if (!isLib) {
-			if (redir.empty() || redir != it->parent_path().string()) {
-				auto p = it->relative_path();
-				if (g_configManager().getBoolean(SCRIPTS_CONSOLE_LOGS)) {
-					SPDLOG_INFO("[{}]", p.parent_path().filename().string());
-				}
-				redir = it->parent_path().string();
-			}
 		}
 
-		if(scriptInterface.loadFile(scriptFile) == -1) {
-			SPDLOG_ERROR(it->filename().string());
-			SPDLOG_ERROR(scriptInterface.getLastLuaError());
-			continue;
-		}
-
-		if (g_configManager().getBoolean(SCRIPTS_CONSOLE_LOGS)) {
+		if (g_configManager().getBoolean(SCRIPTS_CONSOLE_LOGS, __FUNCTION__)) {
 			if (!reload) {
-				SPDLOG_INFO("{} [loaded]", it->filename().string());
+				g_logger().info("[script loaded]: {}", realPath.filename().string());
 			} else {
-				SPDLOG_INFO("{} [reloaded]", it->filename().string());
+				g_logger().info("[script reloaded]: {}", realPath.filename().string());
 			}
 		}
 	}
